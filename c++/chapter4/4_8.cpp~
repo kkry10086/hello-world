@@ -1,0 +1,7 @@
+#include<iostream>
+
+int main(){
+	double d=f()[6];
+	std::cout<<d;
+	return 0;
+}
