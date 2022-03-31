@@ -9,7 +9,7 @@
 iterator:
 vec.begin()+vec.size()==vec.end();
 vec.end()+1=vec.begin();
-通过这一情况可以得知：iterator++指(iterator+1)/vec.size();
+通过这一情况可以得知：iterator++指(iterator+1)%vec.size();
 
 <list>就是我们认为的一般的链表结构。
 增删减改就是链表的操作。
