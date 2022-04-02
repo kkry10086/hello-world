@@ -1,9 +1,10 @@
+#ifndef GUARD_grade1_h
+#define GUARD_grade1_h
+
 //topic : This program is my first time write down to 
 //        resolve how to compute synthetic grade .
 //        So I used index before i learn iterator.  
 //
-#ifndef GUARD_grade1_h
-#define GUARD_grade1_h
 
 #include<vector>
 #include<iostream>
