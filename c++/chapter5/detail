@@ -1,0 +1,6 @@
+我在使用chapter5里面的代码时，发现自己以前使用的代码无法使用。
+问题：使用read()函数时发现无论怎么输入都只能读入一个输入结果，其他都不行。
+
+在chapter6里面使用getline(istream& o,string s),也是同样的结果，可能原因是
+std::cin；但是我使用了cin.clear()结果也一样，也使用过cin.ignore()，所以这与cin
+缓冲区的问题好像不大。

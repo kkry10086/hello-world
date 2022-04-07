@@ -12,13 +12,19 @@ struct Student_info{
 
 //read student's homework grade
 std::istream& read_hw(std::istream& in,std::vector<double>& hw){
-	hw.clear();
+
+
+  if(in){
+        hw.clear();
 	double x;
 	std::cout<<"students' homework grade:"<<std::endl;
-	while(in>>x){
-		hw.push_back(x);
-	}
+	while(in>>x)
+	  hw.push_back(x);
+	if(in)std::cout<<"not"<<std::endl;
 	in.clear();
+	if(in)std::cout<<"yes"<<std::endl;
+
+  }
 	return in;
 }
 
@@ -26,9 +32,8 @@ std::istream& read_hw(std::istream& in,std::vector<double>& hw){
 std::istream& read(std::istream& in,Student_info& s){
 	std::cout<<"name midterm fianl:"<<std::endl;
 	in>>s.name>>s.midterm>>s.final;
-	if(in){
 	read_hw(in,s.homework);
-	}
+	
 	return in;
 	
 }
