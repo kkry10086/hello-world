@@ -16,20 +16,26 @@ int main(){
 
   cout<<"first picture to write"<<endl;
   while(getline(cin,s)){
+    //cout<<"v1"<<endl;
     v1.push_back(s);
   }
-  /*
+  
+  cin.clear();
+  clearerr(stdin);
   cout<<"second picture to write"<<endl;
   
   while(getline(cin,s)){
+    //cout<<"v2"<<endl;
     v2.push_back(s);
   }
-  */
 
+  cout<<"print v1:"<<endl;
+
+  
   for(vector<string>::size_type i=0;i!=v1.size();++i){
     cout<<v1[i]<<endl;
   }
-  
+  cout<<"print v2:"<<endl;
   for(vector<string>::size_type i=0;i!=v2.size();++i){
     cout<<v2[i]<<endl;
   }
