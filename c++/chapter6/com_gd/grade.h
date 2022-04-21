@@ -10,7 +10,7 @@ using std::sort;
 
 
 
-double median(const vector<double>& hw){
+double median(const vector<double> hw){
   sort(hw.begin(),hw.end());
 
   vector<double>::size_type mid=hw.size()/2;

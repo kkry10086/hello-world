@@ -8,8 +8,9 @@ using std::cin;using std::cout;
 using std::endl;using std::map;
 using std::string;
 using std::vector;
-using std::geline;
-using std::space;
+using std::getline;
+using std::isspace;
+using std::istream;
 
 /*
 int main(){
@@ -30,7 +31,7 @@ int main(){
 }
 */
 
-vector<string> split(const string& s){
+vector<string> find_words(const string& s){
   vector<string> ret;
 
   typedef string::size_type sz;
@@ -41,7 +42,7 @@ vector<string> split(const string& s){
       i++;
 
     sz j=i;
-    while(i!=s.size()&&!isspace(s[j])){
+    while(j!=s.size()&&!isspace(s[j])){
       j++;
     }
 
@@ -51,19 +52,19 @@ vector<string> split(const string& s){
       i=j;
     }
   }
-
+  
   return ret;
     
 }
 
 
 map<string,vector<int> > xref(istream& in,
-			      vector<string> find_words(const string&)=split){
+			      vector<string> find_words(const string&)){
 
   string line;
   int line_num=0;
 
-  map<string,vetor<int> > ret;
+  map<string,vector<int> > ret;
 
   while(getline(in,line)){
     line_num++;
@@ -78,9 +79,24 @@ map<string,vector<int> > xref(istream& in,
 
 int main(){
   map<string,vector<int> > str_line;
-  str_line=xref(cin,split);
+  str_line=xref(cin,find_words);
 
-  
+  map<string,vector<int> >::const_iterator it=
+    str_line.begin();
+  while(it!=str_line.end()){
+    
+    cout<<it->first<<"出现的行数是：";
+    
+    vector<int> ::const_iterator i;
+    i=it->second.begin();
+    while(i!=it->second.end()){
+      cout<<*i<<',';
+      i++;
+    }
+    it++;
+    cout<<endl;
+    
+  }
   return 0;
 }
 

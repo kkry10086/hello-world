@@ -1,7 +1,7 @@
 
 #include"student.h"
 #include"grade.h"
-#include"write_analysis.h"
+//#include"write_analysis.h"
 #include"extract_fails.h"
 #include<iostream>
 #include<vector>
@@ -39,10 +39,10 @@ vector<Student_info> did,didnt;
     cout<<"Every student did all hw"<<endl;
   }
   //compute median_analysis
-  write_analysis(cout,"median",median_analysis,did,didnt);
+ // write_analysis(cout,"median",median_analysis,did,didnt);
 
   //compute average_analysis
-  write_analysis(cout,"average",average_analysis,did,didnt);
+  //write_analysis(cout,"average",average_analysis,did,didnt);
 
   //did.insert(did.begin(),did.end(),didnt.begin());
 
