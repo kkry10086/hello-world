@@ -3,6 +3,8 @@
 #include<string>
 #include<cctype>
 #include<iostream>
+#include<cstdlib>
+#include<algorithm>
 
 using std::cin;
 using std::istream;
@@ -11,6 +13,8 @@ using std::map;
 using std::string;
 using std::getline;
 using std::isspace;
+using std::rand();
+usinng std::find;
 
 typedef vector<string> Rule;
 typedef vector<Rule> Rule_collection;
