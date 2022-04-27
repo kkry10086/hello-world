@@ -170,3 +170,20 @@ FHS要求必须存在的目录:
 
 FHS建议可以存在的目录:
 
+/usr/games/: 与游戏比较相关的数据放置处。
+/usr/include/: c/c++等程序语言的头文件(header)与包含文件(include)放置处，当我们以
+               Tarball方式(*.tar.gz的方式来安装软件)安装某些程序时，会使用到里面的
+	       许多文件。
+
+/usr/libexec/: 某些不被一般用户常用的执行文件或脚本(script)等，都会放置在此目录中。
+               例如大部分X窗口下面的操作命令，很多都是放在此目录下。
+
+/usr/lib<qual>/: 与/lib<qual>的功能相同，因此目前/lib<qual>就是链接到此目录中。
+
+/usr/src/: 一般源代码建议放置在此，src由source的意思。至于内核源代码则建议放置到
+           /usr/sec/linux/目录下。
+
+
+the meanings and contents of /var
+/var的意义和内容:
+
