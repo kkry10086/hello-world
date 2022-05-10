@@ -181,7 +181,7 @@ FHS建议可以存在的目录:
 /usr/lib<qual>/: 与/lib<qual>的功能相同，因此目前/lib<qual>就是链接到此目录中。
 
 /usr/src/: 一般源代码建议放置在此，src由source的意思。至于内核源代码则建议放置到
-           /usr/sec/linux/目录下。
+           /usr/src/linux/目录下。
 
 
 the meanings and contents of /var
