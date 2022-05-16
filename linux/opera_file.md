@@ -198,3 +198,57 @@
 
 
 七、磁盘/文件系统系统参数自定义：
+   修改目前文件系统的一些相关信息，例如Label name，journal等等。
+   （1）mknod：
+   Linux下面的所有设备都是以文件来表示，而这就是统统major和minor数值来替代。
+   通过ls -l查看磁盘设备，可以看到有主要设备代码（major）和次要设备代码（minor）；
+   我们的Linux内核支持的设备数据就是通过这两个数值来决定的。
+   在某些情况下，我们是需要手动处理设备文件的，例如，某些服务被chroot到特定目录下，
+   就需要这么做。
+   mknod 设备文件名 [bcp] [major] [minor]
+   b：设置设备名称成为一个外接存储设备文件，磁盘；
+   c：设置设备名称成为一个外接输入设备文件，鼠标，键盘；
+   p: 设置设备名称成为一个FIFO文件。
+   major：主要设备代码
+   minor：次要设备代码
+
+
+
+   （2）xfs_admin修改xfs文件按系统的UUID与Label name:
+   xfs_admin [-lu] [-L label] [-U uuid] 设备文件名
+   -l： 列出这个设备的label name
+   -u： 列出这个设备的UUID
+   -L： 设置设备的Label name
+   -U： 设置设备的UUID
+
+   （3）tunefs修改ext4的Label name ，UUID
+   tunefs [-l] [-L Label] [-U uuid]
+   -l： 类似dumpe2fs -h的功能，将superblock的数据读出；
+   -L： 修改Label name
+   -U： 修改UUID
+
+
+八、设置启动挂载：
+   (1)启动挂载/etc/fstab和/etc/mtab：
+   要在系统启动时自动挂载，那就在/etc/fstab里面设置；具体要求：
+   .根目录/是必须挂载的，而且一定要先于其他挂载点被挂载进来；
+   .其他挂载点必须是已挂载的目录，可任意指定，但一定要遵守必须的系统目录架构原则；
+   .所有挂载点在同一时间之内，只能挂载一次；
+   .所有硬盘分区在同一时间之内，只能挂载一次；
+   .如果进行卸载，你必须先将工作目录移到挂载点之外；
+   文件内容：
+   [设备/UUID等] [挂载点] [文件系统类型] [文件系统参数]  [dump] [fsck]
+        1：磁盘设备文件名/UUID/LABEL name:
+ 	  .文件系统或磁盘的设备文件名，如/dev/dsa*
+	  .文件系统的UUID名称，
+	  .文件系统的LABEL名称
+
+        2：挂载点：目录
+	3：磁盘分区的文件按系统类型
+	4.文件系统参数：
+	async/sync 磁盘是否以异步方式运行，async（异步）性能较佳，磁盘寿命长。
+	auto/noauto：当执行mount -a时，此文件系统是否会被主动测试挂载，默认为
+	             auto；
+
+         rw/ro：让该分区以可读取或只读的状态挂在上来。
+	 exec/noexec：
