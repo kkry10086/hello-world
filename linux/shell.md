@@ -180,5 +180,85 @@
 	 -p ：后面接提示字符（提示语句将会被显示出来）
 	 -t ：后面可以接等待的秒数
 	 
-       2.declare.typeset
-       3.array
+       2.declare,typeset
+          declare或typeset是一样的功能，就是声明变量的类型．
+	  decleare [-aixr] variable
+	  -a　：将后面名为variable的变量定义为array类型
+	  -i　：将后面名为variable的变量定义为integer类型
+	  -x　：用法与export一样，就是将后面的variable变为环境变量
+	  -r　：将变量设置成为readonly类型，该变量不可被改变内容，也不能unset．
+	  　　　也不能修改readonly的类型，只有注销再登陆才能恢复．
+
+          important:
+	  1.变量类型默认是字符串，所以整形是要-i来指定变量类型;
+	  2.bash环境中的数值计算，默认最多仅能到整数形态，所以1/3结果是0；
+	  　argument(参数)前面变为+变为取消．
+	  
+       3.array（变量类型）
+       数组的设置方式：
+       var[index]=content
+       读取建议使用${var[index]}
+
+
+　　　10.2.7　与文件系统及程序的限制关系：ulimit
+      linux是多人多任务的系统，我们要考虑到各种可能的情况：假设有十几个人同时
+      登陆，同时打开多个文件．假设一个人打开的文件占用内存大小至少为1Ｇ，此时
+      电脑内存就要有20Ｇ才行，现实中内存没有可能每个电脑都做到那样．
+      因此我们要限制用户的某些系统资源，包括可以打开的文件数量，可以使用的
+      cpu时间，可以使用的内存总量等．
+
+　　　ulimit:
+      ulimit [-SHacdfltu] [配额]
+      -H：hard limit,必定不能超过这个值
+      -S：soft limit,可以超过这个设置值，但是超过则有警告信息
+      -a：后面不接任何选项与参数,可列出所有的限制额度
+      -c：当某些程序发生错误时，系统可能会将该程序在内存中的信息写成文件（除错用）
+      　　，这种文件就被称作内核文件（core file）．此为限制每个内核文件的最大容量．
+      -f：此shell可以建立的最大文件容量，单位为2kbytes.
+      -d：此程序可使用的最大段内存（segment）容量．
+      -l：可用于锁定（lock）的内存量．
+      -t：可使用的最大cpu时间（单位为秒）
+      -u：单一使用者可以使用的最大进程（process）数量．
+
+
+   10.2.8　变量内容的删除，取代与替换．
+   　　1.变量内容的删除与替换：
+   　　　可以自己试试，不过别用环境变量．
+         ${variable#/name}
+	 ${variable%:name}
+	 #代表从前面开始删除，到name，由于最前面是/,所以是/
+	 %/#代表最短，
+	 %%/##代表最长
+	 %代表从后面开始删除，到name,由于最后面是:,所以是:
+
+         替换：
+	 ${variable/name1/name2}
+	 两个/之间就是要替换的旧字符串．后面的name2就是替换的新字符串．
+	 只替换最先一个
+	 若是${vaariable//name1/name2},就是全部替换．
+
+         new var=${old var-content}这个是赋值的，只有当var还没有赋值时可以使用，
+	 就连空字符串也没法用．
+	 但是空字符串可以使用new var=${old var:-content}来赋值．
+
+         若-变为+,那么就会反过来，只有在var已经赋值/var是空字符串才可以赋值，
+	 其他情况不可以．
+	 var=${str[:]+expr}
+	 var=${str[:]=expr}
+	 var=${str[:]?expr}
+	 这里还是自己实操比较好．
+
+
+   10.3 命令别名与命令历史
+   　10.3.1　命令别名设置：alias,unalias
+      当你要使用的命令非常长时，可以用alias取别名．
+      另一种方法是，使用shell script
+      alias用法：alias str1='str2'
+      本质是创造一个新的命令．
+      取消别命：unalias
+      用法：unalias str1
+      
+   　10.3.2　历史命令history
+      history [n]
+      history [-c]
+      history [-raw] histfiles
