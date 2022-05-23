@@ -262,3 +262,13 @@
       history [n]
       history [-c]
       history [-raw] histfiles
+       n：列出最近的ｎ条命令
+      -c：将目前的shell中的所有histroty内容全部清除
+      -r：将hissfiles的内容读到shell的history记录中
+      -a：将目前新增的history命令新增入histfiles中，若没有家histfiles,
+          则默认加入~./bash_history
+      -w：将目前的history记录内容写入到histfiles中
+      1
+      !num：执行第num条命令
+      !command：有最近的命令开始向前查开头是command，并执行
+      !!：执行上一条命令
