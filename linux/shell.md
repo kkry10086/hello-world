@@ -272,3 +272,99 @@
       !num：执行第num条命令
       !command：有最近的命令开始向前查开头是command，并执行
       !!：执行上一条命令
+
+
+10.4 Bash shell的操作环境：
+
+   10.4.1命令的运行顺序：
+    1.相对/绝对路径执行命令
+    2.有alias找到该命令来执行
+    3.由bash内置的（builtin）命令来执行
+    4.通过$PATH这个变量的顺序查找到的第一个命令来执行
+    可以看到我们平常使用的命令都是在后面的几个中，例如ls等
+
+   10.4.2 bash 登陆与欢迎信息：/etc/issue、/etc/motd
+     使用tty登陆时，看到的信息由两个部分组成，欢迎信息，登陆要求
+     欢迎信息在issue里面。
+     还有一个是/etc/issue.net是远程登录时使用的。
+     如果你想要让用户登录后取得一些信息，例如你想要让大家都知道的信息：那么可以
+     将信息写入到/etc/motd里面。
+
+
+    10.4.3 bash的环境配置文件：
+     系统中一些环境配置文件，让bash子啊启动时直接读取这些配置文件，以规划好bash
+     的操作环境。而这些配置文件又可以分为全局系统配置文件以及用户个人偏好配置文
+     件。
+     
+     1.login 与non-login shell
+       .login shell:取得bash时需要完整的登陆流程，就成为login shell。也可以
+                    这么说：你需要输入用户的账号与密码。此时取得的bash就是
+		    login shell。
+       .non-login shell：取得bash的方式不需要重复登录的操作。我们在使用GNOME的
+                         界面后，打开terminal（实际上是/bin/bash）时不需要登陆。
+
+
+      login shell一般会读取两个配置文件：
+      1./etc/profile:
+      这是系统整体的设置，最好不要修改。
+      2.~/.bash_profile或/~.bash_login或~/.profile：
+      属于用户个人设置，你要添加自己的数据，就写入这里。
+
+      /etc/profile:login shell才会读取。这个文件可以利用用户标识符（UID）来
+      决定很多重要的变量数据。也是每个用户登陆取得bash时一定会读取的配置文件。
+      这个文件设置的主要变量有：
+      PATH：会根据UID决定PATH变量要不要含有sbin的系统命令目录。
+      MAIL：根据账号设置好用户的mailbox到/var/spool/mail账号名。
+      USER：根据用户的上好设置此变量内容。
+      HOSTNAME：根据主机的hostname命令来决定此变量的内容。
+      HISTSIZE：历史命令记录条数。
+      umask ：包括root默认为022，而一般用户为002。
+      
+      除此之外，下面的这些文件会依序被调用（在centos7中）：
+      1./etc/profile.d/*.sh:
+      只要在/etc/profile.d目录中且扩展名为.sh，另外，用户具有r的权限，那么该文件就
+      可以/etc/profile调用。这个目录下面的文件规范了bash操作界面的颜色、语系、命令
+      别名等。同时你也可以用*.sh来给其他用户设置一些共享的命令别名等。
+      2./etc/locale.conf:
+      这个文件是由/etc/profile.d/lang.sh调用的，这也是决定bash默认使用何种语系的
+      重要配置文件。
+      3.usr/share/bash-completion/completions/*
+      命令行的【tab】功能就是在这个目录找到相应的命令来处理的。由/etc/profile.d/
+      bash_completion.sh加载。
+      
+      ~/.bash_profile:
+      bash在读完整体环境设置的/etc/profile并借此调用其他配置文件后，接下来则是会
+      读取用户的个人配置文件。读取顺序：
+      ~/.bash_profile
+      ~/.bash_login
+      ~/.profile
+      本质只会读取一个，但是前面的没读到，就会读后面的。
+      
+      source：读入环境配置文件的命令
+      source ~/.bashrc
+      . ~/.bashrc 这两个命令是一样的。
+      
+      ~/.bashrc(non-login shell也会读)：
+      当你取得non-login shell，该bash配置文件仅会读到/.bashrc而已。
+      此外linux还会调用/etc/bashrc这个文件，为什么？
+      1.根据不同的UID设置umask的值。
+      2.根据不同的uid设置提示字符（PS1）。
+      3.调用/etc/profile.d/*.sh的设置。
+
+
+
+      其他相关配置文件：
+      /etc/man_db.conf:
+      这个文件对于系统管理员是非常重要的文件。规范了使用man的时候，man page的路径
+      到哪里去寻找。什么时候来修改文件，当你使用tarball（解压压缩包）的方式来安装
+      你的软件的时候。那么你的man page可能会放置在/usr/local/software/man里面。
+      这个时候你就要以手动的方式将该路径加到/etc/man_db.conf里面。
+      ~/.bash_history:
+      默认情况下，我们的历史命令就记录在这里。记录的条数有HISTFILESIZE决定。
+      ~/.bash_logout：
+      这个文件则记录了【当我注销bash后，系统帮我做完什么操作后才离开】的意思。一般
+      情况下只是帮我们清掉屏幕的消息。当然你也可以将其他的任务写在里面。
+
+
+
+   10.4.4 终端的环境设置：stty,set
