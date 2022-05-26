@@ -453,4 +453,37 @@
      
      10.6.2 排序命令：sort,wc,uniq
      sort:
+     sort是排序命令：
+     sort [-fbMnrtuk] [file or stdin]
+     -f：忽略大小写
+     -b：忽略最前面的空格字符部分
+     -M：以月份的名字来排序
+     -n：使用纯数字进行排序
+     -r：反向排序
+     -t：分割符号，默认是[tab]
+     -u：uniq，相同的数据只输出一行
+     -k：以哪个区间来进行排序（类似cut的-f）
+
+
+     uniq:
+     uniq [-ic]
+     -i：忽略大小写字符不同
+     -c：进行计数
      
+     
+     wc:计算字，行
+     wc [-lvm]
+     -l：仅列出行
+     -v：仅列出多少字
+     -m：多少字符
+
+
+
+    10.6.3双向重定向：tee
+    tee可以将数据分流到一个文件，一个屏幕．
+    tee [-a] file
+    -a：以累加（append）的方式，将数据加入file里面
+
+　　
+　　10.6.4　字符转换命令：　tr,col,join,paste,expand
+    
