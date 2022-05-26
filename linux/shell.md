@@ -368,3 +368,12 @@
 
 
    10.4.4 终端的环境设置：stty,set
+   stty -a 显示bash环境所有的按键内容。
+   intr：发送一个interrupt信号给目前正在run的程序（意思是终止）；
+   quit：发送一个quit信号给目前正在run的程序；
+   erase：向后删除字符；
+   kill：
+   eof：
+   start：
+   stop：
+   susp：
