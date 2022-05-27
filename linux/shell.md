@@ -357,7 +357,7 @@
       /etc/man_db.conf:
       这个文件对于系统管理员是非常重要的文件。规范了使用man的时候，man page的路径
       到哪里去寻找。什么时候来修改文件，当你使用tarball（解压压缩包）的方式来安装
-      你的软件的时候。那么你的man page可能会放置在/usr/local/software/man里面。
+      你的软件的时候。那么你的man page可能会放置在/usr/local/[software]/man里面。
       这个时候你就要以手动的方式将该路径加到/etc/man_db.conf里面。
       ~/.bash_history:
       默认情况下，我们的历史命令就记录在这里。记录的条数有HISTFILESIZE决定。
