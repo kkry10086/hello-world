@@ -76,7 +76,12 @@ learning shell scripts
    address:~/bin/showname.sh
 
    2.随日期变化:利用date建立文件
+   address: ~/bin/create_datefile.sh
    当我们要将每一天的数据库的数据备份以下,那么我们就可以用时间参与备份文件的名称.
+
+   3.数值运算:简单的加减乘除
+   利用[$((计算式))]来进行数值运算.
+   address: ~/bin/multiplying.sh
    
      
     
