@@ -158,3 +158,124 @@ learning shell scripts
 
 
     shift:造成参数变量号码偏移
+    adress :shift_paras.sh
+    shift num:可以使变量向前移动，此时$2变为$1．而$1就会被移除．
+
+　　
+
+12.4　条件判断式
+
+   ［if then］:
+   
+   1.单层，简单条件判断式：
+   如果你只有一个判断式要进行：
+   if [条件判断式];then
+           但条件判断式成立时，可以进行的指令工作内容
+   fi
+
+　
+   条件判断式：
+   但有多个判断条件时，我们有两个写法，第一种：只有一个中括号，如上面所写．
+   另一种：有多个中括号，彼此之间使用|| 或　&&　来间隔．
+   ["${yn}" == "Y" -o "${yn}" == "y"]
+   ["$｛yn}" == "Y" ] || [ "${yn}" == "y"]
+
+
+   2.多重，复杂的条件判断式：
+   if [条件判断式]; then
+   elif [条件判断式]; then
+   else
+   fi
+   address:hello-2.sh
+
+
+   中途插入一些信息：netstat;
+   netstat -tunl
+   可以得到关于目前主机开启的网络服务端口
+   在local address这里列中，127.0.0.1仅对本机开放，
+   0.0.0.0 或　:::　对整个Internet　开放
+
+   常见端口与相关网络服务的关系：
+   80：www
+   22:ssh
+   21:ftp
+   25:mail
+   111:RPC(远程过程调用)
+   631:CPUS(打印服务功能)
+
+   address : netstat.sh
+
+
+   12.4.2 利用case...esac判断
+   case $变量名称　in
+     "第一个变量内容")
+            程序内容
+	    ;;
+     "第二个变量内容")
+            程序内容
+	    ;;
+
+     *)
+            程序内容
+	    ;;
+
+   esac
+   注意：开头结尾是case与esac；每一个变量内容的程序段最后都需要两个分号(;;)；
+   　　　*变量的用处是类似else,即其他所有的可能性,本质指0－无穷的任意字符，通
+   　　　配符．
+
+   address: hello-3.sh
+
+
+   12.4.3 利用fuction功能
+   语法：
+   fuction fname(){
+   　　程序段
+   }
+   由于shell script的运行顺序是从上而下，从左到右，因此在shell script当中的
+   fuction的设置一定要在程序的最前面，就像ｃ语言，这样才可能被找到．
+   address :show123-2.sh
+
+   另外，fuction也是拥有内置变量的，它的内置变量与shell脚本很类似，函数名称
+   表示$0,而后续的变量也是以$1,$2...来替换．fuction里面的变量与shell script
+   里面的变量不同．
+
+
+   12.5 循环loop
+
+   12.5.1 while do done ,until do done
+
+   while [ condition ]
+   do
+      程序段落
+   done
+   当condition条件成立时，就进行循环，直到条件不成立
+
+
+   until [condition]
+   do
+       程序段落
+   done
+   当condition条件不成立时，就进行循环，直到条件成立
+
+
+   address : yes_to_stop.sh;cal_1_100.sh
+
+
+
+   12.5.2 for...do...done(固定循环)
+   相对于while,until;for已经知道要进行几次循环
+   for var in con1,con2,con3...
+   do
+      程序段落
+   done
+
+   第一次循环为con1
+   第二次循环为con２
+   第三次循环为con３
+   ．．．
+
+   address : show_animals.sh;userid.sh;pingip.sh;
+   seq 1 100 生成1到100的每个整数．
+   
+   
