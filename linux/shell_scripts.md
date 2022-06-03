@@ -263,7 +263,7 @@ learning shell scripts
 
 
 
-   12.5.2 for...do...done(固定循环)
+   12.5.3 for...do...done(固定循环)
    相对于while,until;for已经知道要进行几次循环
    for var in con1,con2,con3...
    do
@@ -277,5 +277,22 @@ learning shell scripts
 
    address : show_animals.sh;userid.sh;pingip.sh;
    seq 1 100 生成1到100的每个整数．
+
+   12.5.4搭配随机数与数组的实验：
+   address: what_to_eat.sh;what_to_eat-2.sh
    
+
+
+   12.6　shell脚本的跟踪与调试
+   我们最讨厌的就是shell script的语法错误：
+   但是我们可以在不直接执行的情况下，判断脚本是否有问题．
+   sh [-nvx] script.sh
+   -n :不要执行脚本,仅查询语法的问题
+   -v :在执行脚本之前,先将脚本文件的内容输出到屏幕上
+   -x :将使用到的脚本内容显示到屏幕上
+
+   -x输出的内容:
+   +号后面的数据其实都是命令串,由于sh -x的方式将命令执行过程也显示出来,
+   这样用户就可以判断程序代码执行到哪一段时会出现相关的信息.
+
    
