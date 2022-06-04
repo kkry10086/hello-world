@@ -159,7 +159,7 @@
      $3。
      所以改进是：
       cat /etc/passwd |awk 'BEGIN {FS=":"} $3<10 {print $1 "\t uid:
-     " $3 "\n"}
+     " $3 "\n"}'
      
      除了BEGIN的功能，还有END。
      如果记录里面是数据，我们想要计算总数或是平均值也可以使用awk：
