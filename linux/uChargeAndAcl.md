@@ -302,6 +302,166 @@
    CREATE_MAIL_SPOOL=yes:建立用户的mailbox
    使用 【ll /var/spool/mail/username】看一下，会发现有这个文件的存在，就是用户
    的邮箱。
-
-
    
+   UID/GID的密码参数又是在哪里参考？/etc/login.defs
+   这个文件里面包含的信息更加的多，详细。关于创建用户时使用的默认值。
+   例如关于UID的最小/大值，密码必须修改时限，警告时限，最小长度，所以在建立前可以
+   来这里看看，详细的默认值。
+   因此useradd在建立账户时，参考了：
+   /etc/default/useradd
+   /etc/login.defs
+   /etc/skel/*
+
+
+   。passwd
+   所有人都可以使用
+   passwd [--stdin] [账号名称]
+   只有root可以使用
+   passwd [-l] [-u] [--stdin] [-S] [-n 日数] [-x 日数] [-w 日数] [-i 日期] 账号
+
+   --stdin ：可以通过来自前一个管道的数据，作为密码输入，对shell脚本有帮助。
+   example：
+          echo "fu8923sdkj" | passwd --stdin usern
+   好处是可以在脚本中大量使用来建立大量的账户。坏处是，会在命令行中，留下命令，
+   一旦系统被攻破，不需要解密/etc/shadow里面的数据，就可以拿到想要的信息。
+   （--stdin并不是每个版本【distribution】都有。）
+   
+   -l ：是lock的意思，会将/etc/shadow第二栏最前面加上!，使密码失效
+   -u : 与-l相对，是unlock的意思。
+   -S ： 列出密码相关参数，即shadow文件内的大部分信息。
+   -n ：shadow第四栏，多久不能修改密码
+   -x ：shadow第五栏，多久内必须修改密码
+   -w ：shadow第六栏，密码过期前的警告天数
+   -i ：接的是【日期】，shadow第七栏，密码失效日期。
+
+   新的distributions使用较严格的PAM模块来管理密码，这个管理机制写在
+   /etc/pam.d/passwd当中。而该文件与密码有关的测试模块就是使用：pam_cracklib.so，
+   这个模块会检验密码相关的信息，并且取代/etc/login.defs内的PASS_MIN_LEN的设定。
+
+   如果不想让某个人登陆系统，那么我们可以让其/etc/shadow的密码栏前面加上!!。可以
+   使用：passwd -l usern
+   之后使用passwd -S usern 查看情况
+
+   。chage
+   比passwd -S 更加详细地显示密码参数显示功能。
+
+   chage [-ldEImMW] 账号名
+   -l ：列出该账号的详细密码参数；
+   -d ：后面接日期，修改shadow第三字段（YYYY-MM-DD）
+   -E ：后面接日期，修改shadow第八段（账号失效日）（YYYY-MM-DD）
+   -I ：后面接天数，修改shadow第七字段(密码失效日)
+   -m ：后面接天数，修改shadow第四段（密码最短保留天数）
+   -M ：后面接天数，修改shadow第五四段（密码多久必须进行变更）
+   -W ：后面接天数，修改shadow第六段（密码过期前的警告日期）
+
+   chage有一个不错的功能：让使用者第一次登陆时，强制他们一定要更改密码后才能够使用系统
+   资源。
+   将密码的最近一次的修改时间改为当前时间，此时，该用户登录时就一定要修改密码。
+
+
+   。usermod
+   修改/etc/passwd 和/etc/shadow
+   usermod [-cdegGlsuLU] 账号名称
+   -c ：后面接账号的说明，/etc/passwd第五栏
+   -d ：后面接账号的家目录，修改/etc/passwd第六栏
+   -e ：后面接日期，/etc/shadow第八栏，账号失效日，（YYYY-MM-DD）
+   -f ：后面接天数，为/etc/shadow第七栏，密码失效日
+   -g ：后面接初始用户组，修改/etc/passwd的第四个字段GID
+   -G ：后面接次要用户组，修改这个使用者能够支持的群组
+   -a ：与【-G】何用，可增加次要群组的支持，并非设定
+   -l ：后面接账号名称，可修改账号名称，/etc/passswd
+   -s ：后面接shell的实际问及那，/etc/passwd第7栏
+   -u ：后面接UID数字，即/etc/passwd第三栏，
+   -L ：暂时将用户的密码冻结，让他无法登陆
+   -U ：将/etc/shadow密码栏的!拿掉，解冻
+
+
+   。userdel
+   删除用户的相关数据：
+
+    1.用户账号/密码相关参数： /etc/passwd，/etc/shadow
+    2.使用者群组相关参数： /etc/group，/etc/gshadow
+    3.用户个人文件数据： /home/username， /var/spool/mail/username
+
+   userdel [-r] username
+   -r：连同用户的家目录也一起删除
+   userdel是确定不要让该用户在主机上面使用任何数据。但是只要在这个系统上面使用了
+   一段时间，那么就会导致其他地方也有相关用户的文件，因此在删除用户之前，先将那些
+   文件占了。find / -user username
+
+
+
+   13.2.2 用户功能
+   一般用户也能够使用的功能：
+
+   。id
+   id可以查询某人或自己的相关UID、GID等信息。
+   id [username]
+
+
+   . finger
+   可以查阅很多用户相关的信息。大部分是在/etc/passwd里面的信息。不过这个指令有点
+   危险。现在默认不安装。
+
+   finger [-s] username
+   -s ：仅列出用户的账号，全名，终端机代号与登陆时间等等
+   -m ：列出与后面接的账号相同者，而不是利用部分比对（包括全名部分）
+
+
+   。chfn 有点像是change finger的意思
+   chfn [-foph] [账号名]
+   -f ：后面接完整的大名
+   -o ：你办公室的房间号码
+   -p ：办公室的电话号码
+   -h ：家里的号码
+
+    这些数据实质是修改到了/etc/passwd的第五栏，即用户的信息栏目。
+
+   。chsh :change shell
+   chsh [-ls]
+   -l ：列出目前系统上面可用的shell，其实就是/etc/shells里面的内容
+   -s ：设定修改自己的shell
+
+
+   13.2.3 新增与移除群组
+   群组的内容跟简单，基本就是/etc/group,/etc/gshadow两个文件的额新增，修改与移除而已。
+   
+   。groupadd
+   groupadd [-g gid] [-r] 组名
+   -g ：后面接某个特定的GID，用来直接基于某个GID
+   -r ：建立系统群组，与/etc/login.defs内的GID_MIN有关
+   也有人建议：新建的与使用者私有群组无关的其他群组时，使用小于1000以下的GID为宜。
+   这就见仁见智。
+
+
+   。groupmod与usermod相似，这个指令仅是在group相关参数的修改
+   groupmod [-g gid] [-n group_name] 群组名
+   -g ：修改既有的GID数字
+   -n ：修改既有的组名
+   不要随意更改GID，会造成系统混乱。
+
+
+   。groupdel
+   groupdel [groupname]     删除群组
+   而且只能删除不是任何账号的initial group（初始群组）的群组。
+
+   。gpasswd：群组管理员功能
+   群组管理员可以管理哪些账号可以加入/移除该群组。
+   root建立群组管理员
+   gpasswd groupname
+   gpasswd [-A user1,...] [-M user3,...] groupname
+   gpasswd [-rR] groupname
+   若没有参数，表示基于groupname 一个密码
+   -A ：将groupname的主控权交由后面的使用者管理
+   -M ：将某些账号加入这个群组
+   -r ：将groupname的密码移除
+   -R ：让groupname的密码栏失效
+
+
+    群组管理员的动作：
+    gpasswd [-ad] user groupname
+    -a ：将某位使用者加入到groupname这个群组；
+    -d ：将某位使用者移除到groupname这个群组；
+
+
+    13.2.4账号管理实例
