@@ -714,9 +714,236 @@ linux的权限很重要，但是传统的权限仅有三种身份（owner,group,
    查看/etc/pam.d/passwd
    可以看到每一行都是一个验证过程；
    第一栏：验证类别；   第二栏：控制标准；    第三栏：PAM 模块与该模块的参数。
+
+
+   第一栏：验证类别（Type）
+   主要分为四种：
+   a.auth
+     是authentication（认证）的缩写，所以这种类别主要用来检验使用者的身份验证，这种
+     通常是需要密码来检验的，所以后续接的模块是用来检验用户身份的
+
+   b.account
+     account(账号)则大部分是在进行authorization(授权)，这种类别则主要在检验使用者是
+     否具有正确的权限，举例来说，你要用一般用户身份去修改/etc/shadow，这肯定不行。
+
+   c.session
+     session是会议期间的意思，所以session管理的就是使用者在这次登入（或使用这个指令）
+     期间，PAM 所给予的环境设定。这个类别通常用在记录用户登入与注销时的信息！例如，如
+     果你常常使用su或是sudo指令的话，那么应该可以在/var/log/secure里面发现很多关于
+     pam的说明，而且记载的数据是【session open,session close】
+
+   d.passwd
+     passwd 就是密码，所以这种类别主要在提供验证的修订工作，举例来说修改密码。
+
+
+   这四个验证的类型通常是由顺序的，不过也有例外。会有顺序的原因是：
+   （1）我们总得先验证身份（auth）后；（2）系统才能够藉由用户的身份给予适当的授权与
+   权限设定（account）；而且（3）登入与注销期间的环境才需要设定，此时，需要记录登入
+   与注销的信息（session）；（4）如果在运作期间需要密码修订时，才给予passwd的类别。
+
+
+   第二栏：验证的控制旗标（control flag）
+   意义：验证通过的标准。管控该验证的放行方式。
+
+   主要分为四种：
+
+   a.required
+     此验证若成功则带有success（成功）的标志，若失败则带有failure的标志，但无论成功或
+     失败都会继续后续的验证流程。由于后续的验证流程可以继续进行，因此相当有利于资料的
+     登陆（log），这也是PAM最常用required的原因。
+     
+   b.requisite
+     若验证失败则立刻回报原程序failure的标志，并终止后续的验证流程。若验证成功则带有
+     success的标志并继续后续的验证流程。这个项目与required最大的差异，就在于失败的
+     时候还要不要继续验证下去。由于requisite会死失败就终止，因此失败时所产生的PAM
+     信息就无法透过后续的模块来记录了。
+     
+   c.sufficient
+     若验证成功则立刻回传success给原程序，并终止后续的验证流程；若失败则带有failure
+     的标志并继续后续的验证流程。与requisite刚好相反。
+     
+   d.optional
+     这个模块空间打过是在显示讯息而已，并不是验证方面的。
    
+
+   13.5.4 常用模块简介：
+   通过/etc/pam.d/login 和 /etc/pam.d/system-auth 文件来研究。
+   由于没法复制过来，所以自己对照。
+   这些文件都使用了非常多的PAM模块，每个模块的功能都不一样，详细的模块情报可以在你的系
+   统中找到:
+   a. /etc/pam.d/* ：每个程序个别的PAM配置文件；
+   b. /lib64/security/* ：PAM 模块文件的实际防止目录；
+   c. /etc/security/* ：其他PAM环境的配置文件；
+   d. /usr/share/doc/pam-*/ ：详细的PAM说明文件。
+
+
+   接下里仅简单介绍几个较常使用的模块：
+
+   a. pam_securetty.so
+     限制系统管理员（root）只能够在安全（secure）的终端机登入；例如tty1/2...等就是
+     传统的终端机装置名称。那么安全的终端机设定就写在/etc/securetty这个文件中。
+
+   b. pam_nologin.so:
+     这个模块可以限制一般用户是否能够登入主机。当/etc/nologin这个文件存在时，则所有一
+     般使用者均无法再登入系统了！当一般使用者登陆时，就会将该文件的内容显示出来。
+     因此一般来讲，这个文件应该是不能存在系统中的。但对于root和已登录的账号没影响。
+
+   c. pam_selinux.so:
+     SELinux 是个针对程序来进行细部管理权限的功能，SELinux 会在16章详细讨论。
+     由于SELinux 会影响用户执行程序的权限。
+
+   d. pam_console.so:
+     当系统出现某些问题，或者是某些时刻你需要使用特殊的终端接口（例如RS232之类的终端
+     联机设备）登入主机时，这个模块可以帮助处理一些文件权限的问题，让使用者可以透过特
+     殊终端接口（console）顺利登入系统。
+
+   e. pam_loginuid.so:
+     我们知道系统账号于一般账号的UID是不同范围的。一般账号UID均大于1000才合理。因此，
+     为了验证使用者的UID真的是我们需要的数值，可以使用这个模块来进行规范。
+
+   f. pam_env.so:
+     用来设定环境变量的一个模块，如果你有需要额外的环境变量设定，可以参考
+     /etc/security/pam_env.conf 这个文件的详细说明。
+
+   g. pam_unix.so:
+     这时个很复杂且重要的模块，可以用在验证阶段的认证功能，可以用在授权阶段的账号许可
+     证管理，可以用在会议阶段的登陆文件记录等，甚至也可以用在密码更新阶段的检验。功能
+     丰富，在早期使用得非常频繁。
+
+   h. pam_pwquality.so
+     可以用来检验密码的强度。包括密码是否在字典中，密码输入几次都失败就断掉这次练级等
+     功能，都是这模块提供的。之前用的是pam_cracklib.so。还提供了
+     /etc/serucity/pwquality.conf 这个文件可以额外指定默认值。
+
+   i. pam_limits.so:
+     ulimit 其实就是这个模块提供的能力。更多细节：/etc/sercurity/limits.conf。
+
+   login 的PAM验证机制流程：
+
+   a. 验证阶段(auth)：首先会先经过pam_securetty.so 判断，如果使用者是root时，则会参
+     考/etc/securtty 的设定；接下来经过pam_env.so 设定额外的环境变量；在透过
+     pam_unix.so 检验密码，若通过则回报login程序；若不通过则继续往下以
+     pam_succeed_if.so判断UID是否打一局1000，若小于1000则回报失败，否则再往下以
+     pam_deny.so拒绝联机。
+
+   b. 授权阶段（account）： 先以pam_nologin.so 判断 /etc/nologin 是否存在，若存在
+     则不允许一般使用者登入；接下来以pam_unix.so 以及 pam_localuser.so 进行账号管理
+     ；再以pam_succeed_if.so 判断UID是否小于1000，若小于1000则不记录登陆信息；最后
+     以pam_permit.so允许账号登入。
+
+   c. 密码阶段（password）：先以pam_pwquality.so 设定密码仅能尝试错误3次；接下来以
+     pam_unix.so 透过sha512,shadow等功能进行密码检验，若通过则回报login程序，若不
+     通过则以pam_deny.so拒绝登陆。
+
+   d. 会议阶段（session）：先以pam_selinux.so暂时关闭SELinux；使用pam_limits.so设
+   定好用户能够操作的系统资源；登入成功后开始记录相关信息在登陆文件中；再以
+   pam_loginuid.so规范不同的UID权限；最后开启pam_selinux.so的功能。
+
+
+
+   。其他的配置文件：在/etc/serurity
+   limits.conf:
+     我们第十章使用的ulimit的功能，除了修改使用者的~/.bashrc配置文件之外，其实系统
+     管理员可以统一藉由PAM来管理。那就是/etc/security/limits.conf 文件的设定。
+
+     使用vim /etc/security/limits.conf:
+     第一字段是账号，或者是群组。若是群组，则前面需要加上@
+     第二字段为限制的依据，是严格（head），还是仅为警告（soft）
+     第三字段为相关限制，此理中限制文件容量
+     第四字段为限制的值，在此例中单位为KB
+
+   对于该文件的修改会立即生效，但是对于已经登陆的用户要重新登陆才能生效，因为这个模块
+   是需要程序来呼叫时才能够使用。而呼叫该该模块的程序只有在登录时才会运行。
+
+
+   /var/log/secure,/var/log/messages
+   如果发生任何无法登入或者是产生一些你无法语气的错误时，PAM 模块都会将数据记载在
+   /var/log/secure当中，所以发生了问题请务必到该文件内去查询一下问题点。举例来说，
+   我们在limits.conf的介绍内，当有多重登入的错误可以到/var/log/secure内查阅。
+
+
+13.6 Linux 主机上的用户讯息传递
+
+   13.6.1 查询使用者： w,who,last,lastlog
+   查看目前已登入的用户：w 或者 who
+   查看每个账号的最近登陆时间，则可以使用lastlog这个指令。lastlog会去读取
+   /var/log/lastlog
+
+
+   13.6.2 使用者对谈： write,mesg,wall
+
+   。write：
+   我们可以利用write这个指令直接将讯息传给系统上面的用户。
+   write 使用者账号 [用户所在终端接口]
+   想要传达的信息
+   最后按ctrl+D来结束输入。
+
+   。mesg：
+   可以不接受别人的讯息。
+   对root传送来的讯息没有抵挡的能力。所以如果是root传送讯息，用户还是要手下的。
+   mesg n
+   要可以接受别人的讯息：
+   mesg y
+   而mesg可以查看当前的mesg的情况。
+
+   wall就是针对所有登录的用户传送简讯（广播）。
+   wall "..."
+
+   13.6.3 使用者邮件信箱：mail
+   write 和 wall　必须等到使用者在线才行。而Linux上面的用户都具有一个mailbox，我们可以
+   寄信，收信。一般来说mailbox都会放置在/var/spool/mail里面，一个账号一个mailbox（文
+   件）。
+   如何寄出信件：
+   【mail -s "邮件标题" username@localhost】一般来说，如果是寄给本机上的使用者，连
+   @localhost都不用写。
    
+   使用重定向将已经写好的信息，用mail发送给别人。
+   mail -s "标题" username@localhost < 文件
+   cat fname | mail -s ... username
 
 
+   接受邮件：
+   直接使用mail
+   之后就会出现wildcard "&" 可以用来输入指令，如果要查阅，输入?查看命令。
 
 
+13.7 centos环境下大量建置账号的方法
+
+   13.7.1 一些账号相关的检查工具
+   检查用户的家目录，密码等数据有没有问题。使用pwck， pwconv/pwuconv
+
+   。pwck
+   这个指令在检查/etc/passwd这个账号配置文件内的信息，与实际的家目录是否存在等信息。
+   还可以对比/etc/passwd 和 /etc/shadow 的信息是否一致，另外，如果/etc/passwd
+   内的数据字段错误时，会提示使用者修订。
+
+   。pwconv
+   这个指令主要目的是在【将/etc/passwd内的账号与密码移动到/etc/shadow中】，早期的UNIX
+   系统当中没有/etc/shadow，所以密码都在/etc/passwd里面。之后才将密码一刀/etc/shadow
+   的第二栏。使用pwconv后，可以：
+
+   a.对比/etc/passwd 及/etc/shadow ，若/etc/passwd 内存在的账号并没有对应的
+   /etc/shadow 密码时，则pwconv回去/etc/login.defs取用相关的密码数据，并建立该账号
+   的/etc/shadow数据；
+   
+   b.若/etc/passwd内存在加密后的密码数据时，则pwconv会将该密码栏移动到/etc/shadow内，
+   并将/etc/passwd内相应的密码栏变成x
+
+
+   。pwuconv
+   相对于pwconv，pwuconv则是【将/etc/shadow内的密码栏数据写回到/etc/passwd 当中，
+   并且删除/etc/shadow文件】。因此建议不要使用，很严重的。
+
+
+   。chpasswd
+   这个指令可以【读入未加密前的密码，并且经过加密后，将加密后的密码写入/etc/shadow当
+   中】。这个指令很常用于在大量建置大量账号的情况中。它可以有Standarf input读入数据，
+   每笔数据的格式是【username:passwd】。例如：
+   echo "kkry:123456" |chpasswd
+   这样，chpasswd会去读取/etc/login.defs文件内的加密机制，因此chpasswd就会使用相应
+   的加密机制来加密。如果你想用不同的加密机制，那就得使用-c 或 -e。不过现在已经有
+   passwd 默认加入--stdin ，因此chpasswd就没啥用了。
+
+
+  13.7.2 大量建置账号模板（使用passwd --stdin 选项）
+  
