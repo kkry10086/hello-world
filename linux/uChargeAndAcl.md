@@ -351,7 +351,7 @@
    -E ：后面接日期，修改shadow第八段（账号失效日）（YYYY-MM-DD）
    -I ：后面接天数，修改shadow第七字段(密码失效日)
    -m ：后面接天数，修改shadow第四段（密码最短保留天数）
-   -M ：后面接天数，修改shadow第五四段（密码多久必须进行变更）
+   -M ：后面接天数，修改shadow第五段（密码多久必须进行变更）
    -W ：后面接天数，修改shadow第六段（密码过期前的警告日期）
 
    chage有一个不错的功能：让使用者第一次登陆时，强制他们一定要更改密码后才能够使用系统
@@ -930,8 +930,8 @@ linux的权限很重要，但是传统的权限仅有三种身份（owner,group,
    并将/etc/passwd内相应的密码栏变成x
 
 
-   。pwuconv
-   相对于pwconv，pwuconv则是【将/etc/shadow内的密码栏数据写回到/etc/passwd 当中，
+   。pwunconv
+   相对于pwconv，pwunconv则是【将/etc/shadow内的密码栏数据写回到/etc/passwd 当中，
    并且删除/etc/shadow文件】。因此建议不要使用，很严重的。
 
 
