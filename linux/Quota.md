@@ -294,6 +294,10 @@
     有上面两项计算出数据宽度为256K*3=768K
     此时应该是
     mkfs.xfs -f -d su=256K,sw=3 -r extsize=768k /dev/md0
+    这里extsize是实时运作区的extent区块的大小,当有文件要被建立的时候,就会先防止在这
+    个区块内,等到分配完毕,再写入到data section的inode与block.而每次要将数据写入raid
+    中,由于RAID5的特性,都会写入所有的n颗磁盘,所以就相当于写入n*stripe的整数倍的数据.
+    因此,extent的大小就要等于n*stripe.假设要写入m个extent,就要写入m*n*stripe的数据.
 
 
 
@@ -343,4 +347,41 @@
 
 
 14.3 逻辑滚动条管理员（Logical Volume Maneger）
+  LVM的重点是[可以弹性的调整filesystem的容量!]而并非在于效能与数据保全上面.LVM可以
+  整合多个实体partition在一起,让这些partitions看起来就像是一个磁盘一样!而且,还可以
+  在未来新增或移除其他的实体partition到这个LVM管理的磁盘当中.
+
+  14.3.1 什么是LVM:PV,PE,VG,LV的意义
+    LVM的全名是:Logical Volume Manager.中文翻译:逻辑滚动条管理员.之所以成为[滚动条]
+    可能是因为可以将filesystem像滚动条一样伸长或缩短.LVM的作法是将几个实体的
+    partitions(或disk)透过软件组合成为一块看起来是独立的大磁盘(VG),然后将这块大磁盘
+    再经过分区成为可使用分区槽(LV),最终就能够挂载使用了.但是为什么这样的系统可以进行
+    filesystem的扩充或缩小呢?这与一个称为PE的项目有关.
+
+    a.Physical Volume,PV,实体滚动条
+    我们实际的partition(或disk)需要调整系统标志符(system ID)成为8e(LVM 的标志符),
+    然后再经过pvcreate的指令将它转成LVM最底层的实体滚动条(PV),之后才能够将这些PV
+    加以利用.
+
+    b.Volume Group,VG,滚动条群组
+    所谓LVM大磁盘就是将许多PV整合成这个VG的东西.所以VG就是LVM组合起来的大磁盘.那么
+    这个磁盘最大可以到多少容量?32为的linux系统时,lv最大仅能支持65534个PE而以,若使用
+    的PE为4MB的情况下,最大容量仅能达到:65534*4/(1024)=256GB差不多.而使用64为的linux
+    就几乎没有容量限制.
+
+
+    c.Physical Extent,PE,实体范围区块
+    LVM预设使用4MB的PE区块,而LVM的LV在32位系统上最多仅能含有65534个PE(lvml的格式).
+    因此预设LVM的LV会有4M*65534/(1024M/G)=256G.这个PE是整个LVM最小的储存区块.也
+    就是说,我们的文件资料都是藉由写入PE来处理的.简单的说:PE就类似文件系统里面的
+    block大小.
+
+
+    d.Logical Volume,LV,逻辑滚动条
+    最终的VG还会被切成LV,这个LV就是最后可以被格式化使用的类似分区槽的东西.那么
+    LV是否可以随意制定大小?不可以.既然PE是整个LVM的最小储存单位,那么LV的大小就
+    与在此LV内的PE总数有关.为了方便用户利用LVM来管理系统,因此LV的装置文件名通常
+    执行为[/dev/vgname/lvname]的样式
+ 
+    
   
