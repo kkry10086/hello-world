@@ -274,3 +274,73 @@
      
 
   14.2.3 软件磁盘阵列的设定
+  centos使用mdadm这个指令：
+  mdadm --detail /dev/md0
+  mdadm --create /dev/md[0-9] --auto=yes --level=[015] --chunk=NK \
+  --raid-devices=N --spare-devices=N /dev/sdx /dev/hdx
+
+  --create:为建立RAID的选项
+  --auto=yes: 决定建立后面接的软件磁盘阵列装置，亦即/dev/dm0,/dev/md1。
+  --chunk=NK：决定这个装置的chunk大小，也可以当成stripe大小，一般是64K或512K。
+  --raid-devices=N：使用几个磁盘（partition）作为磁盘阵列的装置。
+  --spare-devices=N：使用几个磁盘作为备用（spare）装置。
+  --level=[015]：设定这组磁盘阵列的等级。支持很多，不过建议只要用0,1,5。
+  --detail：后面所接的那个磁盘阵列装置的详细信息。
+
+  a.格式化与挂载使用RAID
+    因为涉及到xfs 文件系统的优化。我们这里的参数
+    stripe(chunk)容量为256K，所以su=256k
+    共有4颗组成RAID5，因此容量少一颗，所以sw=3
+    有上面两项计算出数据宽度为256K*3=768K
+    此时应该是
+    mkfs.xfs -f -d su=256K,sw=3 -r extsize=768k /dev/md0
+
+
+
+   14.2.4 仿真RAID错误的救援模式
+   mdadm --manage /dev/md[0-9] [--add 装置] [--remove 装置] [--fail 装置]
+   --add   ：会将后面的装置加入到md中。
+   --remove：会将后面的装置由这个md中移除。
+   --fail  ：会将后面的装置设定为出错的状态。
+
+     a.设定磁盘为错误（fail）
+       mdadm --manage /dev/md[0-9] --fail /dev/sdan
+     b.把/dev/sdan 移除在加回去
+       mdadm --manage /dev/md[0-9] --remove /dev/sdan
+       mdadm --manage /dev/md[0-9] --add /dev/sdan
+
+
+  14.2.5 开机自启动RAID并自动挂载
+    现在的distribution大多会自己搜寻装置（/dev/sda..）然后在开机的时候给予设定好所需
+    要的功能不过还是修改配置文件比较好。
+    文件位置：  /etc/mdadm.conf.
+    ARRAY /dev/md0  UUID=......
+
+    之后在/etc/fstab写上相应的配置。
+    这里会有两个UUID，一个是blkid的，另一个是mdadm --details /dev/md0。不要搞错。
+
+
+
+  14.2.6 关闭软件RAID（重要！）
+    除非你以后需要用到这个md0，否则就一定要删掉。关掉它，是因为它使用的是我们系统的
+    磁盘分区槽，如果只是将/dev/md0卸载掉，然后忘记关掉RAID。结果就是你未来重新分区
+    /dev/sdaN时可能出现一些莫名其妙的问题。所以一定要关闭。
+    1.先卸载挂载点；
+    2.删掉/dev/fstab里面的挂载信息；
+    3.覆盖掉RAID的metadata以及XFS的superblock，才关闭/dev/md0；
+    4.dd if=/dev/zero of=/dev/md0 bs=1M count=50
+    5.mdadm --stop /dev/md0（设立就关闭掉了）
+    6.将磁盘里面备份的RAID的相关数据删除掉。
+    7.dd if=/dev/zero of=/dev/sda[0-128] bs=1M count=10
+    8.cat /proc/mdstat 此时数据就会消失
+    9.将/etc/mdadm.conf的相关数据删掉。
+    
+    上面7的dd是用来将磁盘中备份的RAID的相关数据删除掉的，因此，如果你只是将配置文件移
+    除，同时关闭了RAID，但是分区草并没有重新规划果，那么重新启动过后，系统还是会将这颗
+    磁盘阵列建立起来，只是名称改变了。
+
+
+
+
+14.3 逻辑滚动条管理员（Logical Volume Maneger）
+  
