@@ -293,7 +293,7 @@
     共有4颗组成RAID5，因此容量少一颗，所以sw=3
     有上面两项计算出数据宽度为256K*3=768K
     此时应该是
-    mkfs.xfs -f -d su=256K,sw=3 -r extsize=768k /dev/md0
+    mkfs.xfs -f -d su=256K,sw=N-1 -r extsize=(N-1)*256k /dev/md0
     这里extsize是实时运作区的extent区块的大小,当有文件要被建立的时候,就会先防止在这
     个区块内,等到分配完毕,再写入到data section的inode与block.而每次要将数据写入raid
     中,由于RAID5的特性,都会写入所有的n颗磁盘,所以就相当于写入n*stripe的整数倍的数据.
@@ -333,7 +333,7 @@
     2.删掉/dev/fstab里面的挂载信息；
     3.覆盖掉RAID的metadata以及XFS的superblock，才关闭/dev/md0；
     4.dd if=/dev/zero of=/dev/md0 bs=1M count=50
-    5.mdadm --stop /dev/md0（设立就关闭掉了）
+    5.mdadm --stop /dev/md0（就关闭掉了）
     6.将磁盘里面备份的RAID的相关数据删除掉。
     7.dd if=/dev/zero of=/dev/sda[0-128] bs=1M count=10
     8.cat /proc/mdstat 此时数据就会消失
@@ -381,7 +381,227 @@
     最终的VG还会被切成LV,这个LV就是最后可以被格式化使用的类似分区槽的东西.那么
     LV是否可以随意制定大小?不可以.既然PE是整个LVM的最小储存单位,那么LV的大小就
     与在此LV内的PE总数有关.为了方便用户利用LVM来管理系统,因此LV的装置文件名通常
-    执行为[/dev/vgname/lvname]的样式
+    执行为[/dev/vgname/lvname]的样式。
+    LVM是如何做到可弹性的变更filesystem的容量？其实就是透过交换PE来进行数据转移。
+    将原本LV内的PE转移到其他装置中以降低LV容量，或将其他装置的PE加到此LV中以加大
+    容量。
+
+
+
+    e.实作流程
+    透过PV，VG，LV的规划后，再利用mkfs就可以将你的LV格式化成为可以利用的文件系统。而
+    且这个文件系统的容量在未来还能够进行扩充或减少，而且里面的数据还不会被影响到。
+    流程看鸟哥的14.3
+
+    那么我的数据写入这个LV时，到底是怎么写入硬盘的。
+    有两种机制：
+      。线性模式（linear）：加入我将/dev/sda1,/dev/sdb1这两个partition加入到VG当
+        中，并且整个VG只有一个LV时，那么所谓的线性模式就是：当/dev/sda1的容量用完之
+	后，/dev/sdb1的硬盘才会被使用到。
+
+
+      。交错模式（triped）：就是将一个数据拆成两部分，分别写入/dev/sda1与/dev/sdb1
+        的含义。类似RAID0。
+
+
+    基本上，LVM的最主要用处是在实现一个可以弹性调整容量的文件系统上，而不是在建立一个
+    效能为主的磁盘上，所以我们应该利用的是LVM可以弹性管理整个partition大小的用途。
+    因此，LVM默认的读写模式是线性模式。如果你是用triped模式，当你的一个partition
+    损坏时，所有LVM的数据都会损坏。所以建议不要。
+
+
+
+  14.3.2 LVM 实作流程
+    LVM 需要核心有支持且需要lvm2这个软件。好在，Centos与其他较新的distributions
+    已经预设将lvm的支持与软件都安装妥当了。
+    接下来就是生成分区：使用fdisk/gdisk， 总共四个，ID为8e，因为有些系统可能侦测不到
+    partition，所以要该为8e。
+
+    1.PV阶段
+      PV有关的指令：
+      。pvcreate：讲实体partition建立成PV
+      。pvscan：搜寻目前系统里面任何具有PV的磁盘
+      。pvdisplay：显示出目前系统上面的PV状态
+      。pvremove：将PV属性移除，让该partition不具有PV属性
+
+
+    2.VG阶段
+      VG有关的指令：
+      。vgcreate：即是主要建立VG的指令。
+      。vgcan：搜寻系统上面是否有VG存在
+      。vgdisplay：显示目前系统上面的VG状态
+      。vgextend：在VG内增加额外的PV
+      。vgreduce：在VG内移除PV
+      。vgchange：设定VG是否启动（active）
+      。vgremove：删除一个VG
+
+      pv的名字就是partition的名字，VG就可以自己取。
+      
+      vgcreate [-s N[mgt]] VG名称  PV名称
+      -s：后面接PE的大小（size）,单位可以是mgt
+
+
+    3.LV 阶段
+      。lvcreate：建立lv
+      。lvscan：查询系统上面的lv
+      。lvdisplay：显示系统上面的lv状态
+      。lvextend：在lv里面增加容量
+      。lvreduce：在lv里面减少容量
+      。lvremove：删除一个lv
+      。lvresize：对lv进行容量大小的调整
+
+      lvcreate [-L N[mgt]] [-n lv名称] VG名称
+      lvcreate [-L N] [-n lv名称] VG名称
+      -L：后面接容量，容量的单位可以是M，G，T等，大小最小是PE，或者是PE的整数倍。
+      -l：后面可以接PE的个数，而不是数量。若要这么做，得要
+      -n：后面接的就是lv的名称
+
+      生成lv partition后，就可以针对lv来处理。VG的名称是kkryvg,而lv的名称必须使用
+      全名。亦即/dev/kkryvg/kkry1才行。
+      lv可以看成是一个partition。之后格式化，挂载就可以使用。
+      文件格式化：
+      mkfs.xfs /dev/kkryvg/kkry1
+
+
+  14.3.3 放大LV容量
+    LVM的最大特色就是弹性调整磁盘容量。放大文件系统时，需要一下这些流程：
+    1.VG阶段需要有剩余的容量：因为需要放大文件系统，所以需要放大LV，但是若没有多的
+      VG容量，那么更上层的LV与文件系统就无法放大。因此你得要用尽各种方法来产生多的
+      VG容量才行。一般来说VG容量不够，最简单的方法就是加硬盘，然后用pvcreate,
+      vgentend增加到VG。
+
+
+    2.LV阶段产生更多的可用容量：如果VG的剩余容量足够了，就可以利用lvresize这个指令
+      来将剩余的容量加入到所需要的lv装置内。
+      
+    3.文件系统的放大：我们的linux实际使用的其实不是lv，而是lv这个装置里面的文件系统。
+      所以一且还是要以文件系统为依归。目前可以放大的文件系统有XFS以及EXT家族。缩小
+      的仅有EXT家族，目前XFS文件系统并不支持文件系统的容量做小。
+      xfs_growfs 指令可以放大XFS文件系统。
+
+
+    最后一个步骤非常重要，整个文件系统在最初格式化的时候就建立了inode/block/
+    superblock等信息，要改变这些信息很难。不过因为文件系统格式化的时候建置的是过个
+    blockgroup，因此我们可以透过在文件系统当中增加blockgroup的方式来增减文件系统的
+    量。而增减block group就是利用xfs_growfs。
+
+
+    14.3.4 使用LVM thin Volume 让lvm动态自动调整磁盘使用率
+
+    想想一个情况，你有个目录未来会使用到大约5T的容量，但是目前你的磁盘仅有3T，问题是，
+    接下来的两个月你的系统还不会超过3T的容量，不过你想要让用户知道，就是他最多有5T可
+    以使用。而且在一个月内你确实可以将系统提升到5T以上的容量。你又不想在提升容量后才
+    放大到5T。这时可以考虑【实际用多少才分配多少容量给LV的LVM Thin Volume】功能。
+    
+    另外，再想象一个环境，如果你需要有3个10GB的磁盘来进行某些测试，问题是你的环境仅有
+    5GB的剩余容量，在传统的LVM环境下，LV的容量是一开始就分配好的，因此你当然没有办法
+    在这样的环境中产生出3个10GB的装置。而且那个10GB的装置其实每个实际使用率都没有超过
+    10%，也就是总用量仅会到3GB而已。所以就可以使用LVM thin Volume
+
+    LVM thin Volume的概念：
+      先建立一个可以实支实付、用多少容量才分配实际写入多少容量的磁盘容量储存池
+      （thin pool），然后再由这个thin pool去产生一个【指定要固定容量大小的LV装置】。
+      在LV上，虽然你会看到【宣告上，他的容量可能由10GB，但实际上，该装置用到多少容量
+      时，才会从thin pool去实际取得所需要的容量】。当然，在所有由thin pool 所分配
+      出来的LV装置中，总实际使用量绝不能超过 thin pool 的最大实际容量。
+
+      开始实作：
+      1.由VB 剩余容量去取出1GB来做出一个名为VBpool的thin pool LV装置，这就是所谓的
+        磁盘容量储存池（thin pool）。
+
+      2.由VB内的VBpool产生一个名为VBthin1的10GB LV装置
+
+      3.将此装置实际格式化为xfs文件系统，并且挂载于/srv/thin目录内。
+
+      。建立一个thin pool装置：
+        lvcreate -L 1G --thinpool kkryvg/kkrypool
+	lvcreate -L 1G -T kkryvg/kkrypool
+
+
+      。建立由thinpool 产生的 lv装置
+        lvcreate -V 10G -n kkrythin1 --thinpool kkrypool kkryvg
+        lvcreate -V 10G -T kkryvg/kkrypool -n kkrythin1
+
+
+      。kkrythin1格式化，挂载。
+        mkfs.xfs /dev/kkryvg/kkrythin1
+
+      这里必须非常小心，虽然一个磁盘可以仿真出很多容量，但是，实际上可用的容量就是实际
+      磁盘储存池内的容量。如果超过该容量，会导致thin pool 里面的内容损毁。
+	
+	
+
+  14.3.5 LVM的 LV 磁盘快照
+    LVM除了可以改变lv的大小，还有一个重要的能力，那就是LV磁盘的快照（snapshot）：
+    快照就是：将当时的系统信息记录下来，就好像照相机一样。未来若有任何资料更改了，则
+    原始资料会被搬移到快照区，没有被更改的区域则由快照区与文件系统共享。
+
+    说明一下：最初建置LV磁盘快照区的时候，LVM会预留一个区域作为数据存放处。此时快照区
+    没有任何数据。而快照区与系统区共享所有的PE数据，因此你会看到快照区的内容与文件系统
+    是一模一样的。等到系统运作一阵子后，假设A区域的数据被更改了，则更改前系统会将该区域
+    的数据移动到快照区。此时系统区的A区域就不会与快照区共享，此时快照区就看不到A区域的
+    新的内容了。还有其他的区域还在与快照区文件系统共享。
+
+    LVM的磁盘快照是很棒的【备份工具】，因为快照缩占用的容量非常小。而且能将当时的文件
+    系统备份下来。
+
+    由于快照区与原本的LV共享PE区块。因此，
+    快照去与被快照的LV必须要在同一个VG里面。（顺带一提，可以使用thin pool的功能来
+    制作快照。但是使用限制非常多。包括最好要在同一个thin pool 内的原始LV磁盘，如果
+    为非thin pool 内的原始LV磁盘快照，则该磁盘快照不可以写入，以及LV磁盘要设定成
+    只读才行。同时使用thin pool做出来的快照，通常是不可启动（inactive）的预设情况，
+    启动柜又有点麻烦。）所以不建议现在做。
+
+
+    针对传统Lv磁盘进行快照的建置，大致流程：
+    。预计被拿来备份的原始LV为/dev/VG/LV
+    。使用传统方式快照建置，原始LV为/dev/VG/LV，快照名称为kkrysnap1,容量为VG的剩余
+      容量
+
+     lvcreate -s -l chunknum -n snapname besnaplvname
+     mount -o nouuid /dev/VG/snap  挂载点
+     这里直接挂载就行，不用格式化。但是要加-o nouuid，因为此时两个partition的UUID是
+     相同的，会报错。
+
+
+    利用快照恢复源系统：
+    首先注意：你也好复原的数据量不能够高于快照区所能负载的实际容量。由于原始数据会被
+    搬移到快照区，如果你的快照区不够大，若原始资料被更改的实际数据量比快照区大，那么
+    快照区当然容纳不了，此时快照区功能会失效。
+
+
+    利用快照区将原本的filesystem备份，我们使用xfsdump
+    xfsdump -l 0 -L lvml -M lvml -f /home/lv.dump /srv/snapshot1
+    因为快照区数据要搬移到原来的数据区，会导致自己本身也有修改，所以要先备份。
+    还原是要格式化的，所以要先备份。格式化即意味着要先umount，在格式化，在挂载上去。
+    所以快照区也是要卸载的再加上删除lv装置，否则就无法作为数据区的快照区（我就有过几
+    次的类似这样的经历）。
+
+    利用快照区进行各项练习与测试的任务，再以原系统还原快照：
+      我们将原本的kkrylv当作备份数据，然后将kkrysnap1当作实际在运作中的数据，任何
+      测试的动作都在kkrysnap1这个快照区当中测试，那么当测试完毕要将测试的数据删除
+      时，只要讲快照区扇区即可。而要复制一个kkrylv的系统，再作另外一个快照区即可。
+
+      这个方法的确有趣：因为修改快照区并不会使得双方的共享文件区域减少，而且，卸载，
+      删除一个快照区，也不会对原本的数据产生影响。这样就只需要删除快照区的数据即可。
+      而用原来的方式就要多几步操作，卸载数据区，删除数据区，在恢复，最后恢复数据。
+
+     当然实际如何，还是要我们亲自去尝试一下。
+
+
+     如何移除系统内的LVM：
+     1.先卸载系统上面的LVM文件系统（包括快照与所有LV）
+     2.使用lvremove移除LV
+     3.使用vgchange -a n VGname让VGname这个VG不具有Active的标志
+     4.使用vgremove移除VG
+     5.使用pvremove移除PV
+     6.使用g/fdisk修改system ID回来。
+
+
+
+      
+	
+    
  
     
   
