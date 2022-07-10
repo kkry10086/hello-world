@@ -1,20 +1,25 @@
-#GUARD_lineC_h
-#DEFINE_lineC_h
+#ifndef GUARD_lineC_h
+#define GUARD_lineC_h
 
-#inlcude<string>
+#include<string>
 #include<vector>
 #include<map>
+
 
 using std::map;
 using std::vector;
 using std::string;using std::getline;
+using std::istream;
+
+
+
 
 map<string,vector<int> > xref (istream& in,
 			       vector<string> find_words(const string&)=split){
 
   string line;
   int line_number=0;
-  map<string,vactor<int> > ret;
+  map<string,vector<int> > ret;
 
   while(getline(in,line)){
     ++line_number;
