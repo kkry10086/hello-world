@@ -82,6 +82,7 @@
 
 
   15.2.2 实际运行单一工作排程
+    
     at [-mldv] TIME
     at -c 工作号码
 
@@ -99,3 +100,236 @@
     HH:MM[am|pm][Month][Date] 同上
     HH:MM[am|pm]+number[minutes|hours|days|weeks]
          在某个时间点[在加几个时间后]才进行
+
+
+    事实上，当我们使用at时会进入一个新的shell环境，来让用户下达工作指令。所以建议最
+    好使用绝对路径来下达指令。工作目录等也是要使用绝对路径更好。
+
+    at的执行与终端机环境无关，就是说，我们使用shell来操作系统，而at却不是。因此所有
+    的standard output/standard error output 都会传送到执行这的mailbox里面。
+    因此如果想要在屏幕上输出文字，就要执行输出到哪个屏幕。
+    例如echo "Hello" >> /dev/tty1.
+
+    注意：在at shell的指令并没有任何的讯息输出，那么at默认不会发email给执行者。如果
+    想要获得信息，可以使用at -m。
+
+    其实at有一个非常棒的优点，【背景执行】。
+
+    a.脱机继续工作的任务：
+    b.由于突发情况需要执行某项工作：
+
+    由于at工作排程的使用上，系统会将该项at工作独立出你的bash环境，直接交给系统的atd程
+    序来接管，因此，当你下达了at的工作之后就可以立刻脱机了，剩下的工作就完全交给Linux
+    管理程序即可。
+
+    1.at工作的管理
+      那么万一指令输错了？就要移除。此时使用atq与atrm。(at -l 和 at -d)
+
+    2.batch:系统有空时才进行背景任务
+      实质上batch是利用at来进行指令的下达。只是加入一些控制参数而已。这个batch神奇
+      的地方在于：他会在cpu的工作负载小于0.8的时候，才进行你所下达的工作任务。
+      工作负载的意思：cpu在单一时间点所负责的工作数量。不是cpu的使用率。
+      举例来说：当一个程序需要一直使用cpu的运算功能，那么此时cpu的使用率可能达到100%
+      ，但是cpu的工作负载则是趋近于1，因为cpu仅负责一个工作。也就是说，cpu的工作负载
+      越大，代表cpu必须要在不同的工作之间进行频繁的工作切换呢。此时对于at的执行就不太
+      合理了。
+
+      batch已经不在支持时间参数，因此batch可以拿来作为判断是否要立刻执行背景程序的
+      依据。可以使用uptime来查看cpu的负载，uptime指令是计算一分钟内的cpu的平均负载。
+      因此，当程序结束，还要等一段时间才能把cpu的平均负载降下来。jobs可以查看后台运
+      行的程序。
+
+
+      crontab的最小时间单位是分钟，所以基本上crontab的工作是每分钟检查一次来处理的。
+
+
+15.3 循环执行的例行性工作排程
+
+  循环执行的例行性工作排程则是由cron(crond)这个系统服务来控制的。linux系统上面原本
+  就有非常多的例行性工作，因此这个系统服务是默认启动的。使用者自己也可以进行例行性工
+  作排程。
+
+  15.3.1 使用者的设定
+  使用crontab需要注意安全性的问题，例如之前提到的问题。所以我们使用了类似at的限制方
+  法；使用的限制数据有：
+  
+  a./etc/cron.allow：将可以使用crontab的账号写入其中，若不在这个文件内的使用者，
+    则不可以使用crontab。
+    
+  b./etec/cron.deny：将不可以使用crontab的账号写入其中，若在这个文件内的使用者，
+    则不可以使用crontab。
+
+   cron.allow的优先级比cron.deny要优先。这两个文件只选择一个来限制而已。
+   当用户使用crontab这个指令来建立工作排程自后，该项工作会被记录到/var/spool/cron/
+   里面去，而且是以账号来作为判别的。
+   注意：不要直接编辑该文件，因为可能由于输入语法错误，会导致无法执行cron。另外，
+   cron执行的每一步工作都会被荆棘路到/var/log/cron这个登陆档中。
+
+   crontab [-u username] [-l|-e|-r]
+   -u：只有root才能进行这个任务，亦即帮其他使用者建立、移除crontab工作排程。
+   -l：编辑crontab的工作内容。
+   -e：查阅crontab的工作内容。
+   -r：移除所有的crontab的工作内容，若仅要移除一项，请用-e去编辑。
+
+   crontab -e 然后就可以进入vi进行编辑工作，每一行都是一项工作。
+   
+   分 时 日 月 周 【user】 指令
+
+   辅助字符：
+   *：代表任何时刻都接受的意思。
+   ,：代表分隔时段的意思。一个栏目可以多几个时间，假设我要今天的3点与9点进行例行性
+      工作排程，那么0 3,6 * * * command
+   -：代表一段时间范围内，举例来说，8到12点之间的没笑的20分都进行一项工作：
+      20 8-20 * * * command
+   /n：n代表数字，即每隔n单位间隔的意思，例如每个5分钟进行一次：
+      */5 * * * * command
+
+   查看使用这目前的crontab的内容：
+   crontab -l
+
+
+  15.3.2 系统的配置文件： /etc/crontab,/etc/cron.d/*
+  crontab -e 就是直接打开/etc/spool/cron里面的文件 进行编辑，会对格式进行确认。
+  cron 这个服务的最低帧测限制是【分钟】，所以【cron 会每分钟去读取一次/etc/crontab
+  与/var/spool/cron的数据内容】，因此，只要编辑完/etc/crontab，并存储后，cron就会
+  自动执行。
+
+  注意：linux的crontab会自动地帮我们每分钟重新读取一次/etc/crontab的例行工作事项，
+       但是有一些UNIX的系统中，由于crontab是读取到内存当中，所以在你修改完
+       /etc/crontab之后，并不会执行，这时就要重新启动crond服务。
+
+    1. /etc/crontab的内容：
+
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+MAILTO=root
+
+# Example of job definition:
+# .---------------- minute (0 - 59)
+# |  .------------- hour (0 - 23)
+# |  |  .---------- day of month (1 - 31)
+# |  |  |  .------- month (1 - 12) OR jan,feb,mar,apr ...
+# |  |  |  |  .---- day of week (0 - 6) (Sunday=0 or 7) OR sun,mon,tue,wed,thu,fri,sat
+# |  |  |  |  |
+# *  *  *  *  * user-name command to be executed
+17 *	* * *	root    cd / && run-parts --report /etc/cron.hourly
+25 6	* * *	root	test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.daily )
+47 6	* * 7	root	test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.weekly )
+52 6	1 * *	root	test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.monthly )
+#
+    
+    a.MAILTO=root：
+      这个项目是说，当/etc/crontab这个文件中的例行性工作的指令发生错误时，或者是该
+      工作的执行结果有STDOUT/STDERR时，会寄发一封mail传给root。不过root并无法在客
+      户端以POP3之类的软件收信，因此，可以将该email改为自己的账号。
+    b.PATH=....：
+      设置PATH环境。
+    c.【分 时 日 月 周 身份 指令】设定：
+       与/var/spool/cron中的主要差别是身份，这是指执行指令的身份。由于/var/spool/
+       cron/ 中都是用使用者的名字作为文件名，所以不需要身份栏目。而/etc/crontab里
+       面就需要了，当然这里面一般默认是root的身份。
+
+
+    2. crond服务读取配置文件的位置
+    a./etc/crontab
+    b./etc/cron.d/*
+    c/var/spool/cron/*
+
+    前面两个配置文件跟系统的运作比较有关系。而/var/spool/cron/里面的文件群，就放置
+    跟用户自己比较有关的配置文件。
+    如果你想要自己开发新的软件，该软件要拥有自己的crontab定时指令时，就可以将相关的
+    配置文件放置到/etc/cron.d目录下。该目录下的文件是【crontab的配置文件脚本】
+    而类似/etc/cron..hourly里面的文件内就只是shell script，必须是能被直接执行的
+    指令脚本。而不是类似crontab里面的设定值。
+
+    总结一下：
+    个人使用：/var/spool/cron/
+    系统维护管理使用：/etc/crontab
+    自己开发软件使用：/etc/cron.d/
+
+
+  15.3.3 一些注意事项
+
+    1.资源分配不均的问题：
+      当大量使用crontab的时候，总是会有问题发生，其中最严重的问题就是【系统资源分配不
+      均】。
+      此时就可以使用【，】来分隔每个时间点。保证不会有任务由于系统繁忙而无法执行。
+
+
+    2.取消不要的输出项目：
+      另外一个困扰发生在【当有执行成果或者是执行的项目中有输出的数据时，该数据将会
+      mail给MAILTO设定的账号】，那么当有一个排程一直出错，导致自己一直收到错误讯息
+      ，此时就可以利用重定向，想数据输出到/dev/null。
+
+    3.安全的校验：
+      很多时候被植入木马都是以例行性命令的方式植入的，所以可以藉由检查/var/log/cron
+      的内容来视察是否有非自己设定的cron被执行。
+
+    4.周与日月不可同时并存
+      简单的说假设日月与周同时设定，那么此时就有一个问题，此时会在日月的那一天执行
+      任务，同时也会在设定的星期几进行任务。而不是只有在日月且刚好是星期几的你那一天
+      进行任务。（这时旧版的情报，新版如何就不清楚了。）
+
+
+  15.4 可唤醒停机期间的工作任务
+
+    15.4.1 什么是anacron
+    anacron并不是用来取代crontab的，anacron存在的目的就在于处理非24小时一直启动的
+    linux系统的crontab的执行。以及因为某些原因导致的超过时间而没有被执行的排程工作。
+
+    anacron也是每个小时被crond执行一次，然后anacron再去检测相关的排程任务有没有被执
+    行，如果有超过期限的工作在，就执行该排程任务，执行完毕或无须执行任何排程时，
+    anacron就停止。
+
+    由于anacron预设会以一天、七天内、一个月为期去侦测系统为诶进行的crontab任务，因此
+    对于某些特殊的使用环境非常有帮助。举例来说：如果你的linux主机是放在公司同仁使用，
+    因为假日大家都不在所以也就没有必要开启，因此，你的linux主机会关闭数天。但是crontab
+    大多在每天的凌晨以及周日的早上进行各项任务，此时关机了，系统很多的crontab的任务就
+    无法进行。anacron刚好解决这个问题。
+
+    anacron如何得知我们的系统啥事关机？使用anacron读取的时间记录文件(timestamps)。
+    anacron会去分析现在的时间与时间记录文件所记载的上次执行anacron的时间，两者比较
+    后若发现有差异，那就是在某些时刻没有进行crontab。此时anacron就会开始执行未进行
+    的crontab任务。
+
+
+  15.4 anacron和/etc/anacrontab
+
+   anacron其实是一支程序并非一个服务。这只程序在crontab的排程中。同时anacron会
+   每个小时主动执行一次。所以anacron的配置文件应该放置在/etc/cron.hourly里面。
+
+   anacron [-sfn] [job]
+   anacron -u [job]
+   -s：开始一连续的执行各项工作(job)，会依据时间记录问你见你的数据判断是否进行。
+   -f：强制进行，而不去判断时间记录文件的时间戳。
+   -n：立刻进行为进行的任务，而不延迟(delay)等待时间。
+   -u：仅更新时间记录文件的时间戳，不进行任何工作。
+   job：由/etc/anacrontab定义的各项工作的名称。
+
+   你会发现在/etc/cron.hourly/dayly/weekly等等目录，anacron的配置文件是
+   0acacron，这是为了防止anacron误判时间参数，因此前面加个0，可以让anacron最先进行。
+   就是为了让时间戳更新，以避免anacron误判crontab尚未进行任何工作的意思。
+   /etc/anacrontab 中
+   天数   延迟时间  工作名称定义  实际要进行的指令串
+   a.天数：anacron执行当下与时间戳（/var/spool/anacron/内的时间记录文件）相差的天数，
+   若超过此天数，就准备开始执行，若没有超过，则不予执行后续的指令。
+   b.延迟时间：若确定超过天数导致要执行排程工作了，那么请延迟执行的时间，因为担心立即
+   启动会有其他资源冲突的问题。。
+   c.工作名称定义：这个没啥意义，就只是会在/var/log/cron里头记载该项任务的名称。通常
+   与后续的目录资源名称相同即可。
+   d.实际要进行的指令串：与0hourly很像，透过run-parts来处理。
+
+
+   所以annacron的执行流程：
+   1.由/etc/anacrontab分析到cron.daily 这项工作名称的天数为1天。
+   2.由/var/spool/anacron/cron.daily取出最近一次执行anacron的时间戳。
+   3.由上个步骤与目前的时间比较，若差异天数为1天以上（含1天），就准备进行指令。
+   4.若准备进行执行，根据/etc/anacrontab的设定，将延迟5分钟+n小时（具体看
+     START_HOURS_RANGE的设定）。
+   5.延迟时间过后，开始执行后续指令，亦即【run-parts /etc/cron.daily】这串指令。
+   6.执行完毕后，anacron程序结束。
+
+   也就是说，如果你没个周日需要执行的动作是放置于/etc/crontab的话，那么该动作只要过
+   期了就过期了，并不会被anacron重新发现，再执行。但如果放置在/etc/cron.monthly/
+   daily/weekly下面，该工作就会被重新发现，并执行。所有这些都在/etc/anacrontab
+   里面有记载。

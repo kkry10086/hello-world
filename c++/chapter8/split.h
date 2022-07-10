@@ -7,10 +7,10 @@
 using std::isspace;
 
 
-bool space(const char& c){
+bool space(const char c){
   return isspace(c);
 }
-bool no_space(const char& c){
+bool no_space(const char c){
   return !space(c);
 }
 
