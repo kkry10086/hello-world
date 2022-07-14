@@ -239,7 +239,7 @@ MAILTO=root
     跟用户自己比较有关的配置文件。
     如果你想要自己开发新的软件，该软件要拥有自己的crontab定时指令时，就可以将相关的
     配置文件放置到/etc/cron.d目录下。该目录下的文件是【crontab的配置文件脚本】
-    而类似/etc/cron..hourly里面的文件内就只是shell script，必须是能被直接执行的
+    而类似/etc/cron.hourly里面的文件内就只是shell script，必须是能被直接执行的
     指令脚本。而不是类似crontab里面的设定值。
 
     总结一下：
