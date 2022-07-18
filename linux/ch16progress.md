@@ -118,7 +118,7 @@
       ps axjf：连同部分进程树状态
       选项与参数
       -A：所有的process均显示出来，与-e相同；
-      -a：不予terminal有关的所有process；
+      -a：不与terminal有关的所有process；
       -u：有效使用者(effictive user)相关的process；
       x ：通常与a这个参数一起使用，显示较完整的信息；
       输出格式规划
@@ -127,7 +127,7 @@
       -f：做一个更为完整的输出；
 
       最重要的两个ps：
-      ps -l：仅观察自己的bash相关进程
+      a.ps -l：仅观察自己的bash相关进程
       F S   UID     PID    PPID  C PRI  NI ADDR SZ WCHAN  TTY          TIME CMD
       0 S  1000  154410  154384  0  80   0 -  3823 do_wai pts/0    00:00:00 bash
       0 R  1000  159513  154410  0  80   0 -  3944 -      pts/0    00:00:00 ps
@@ -158,5 +158,74 @@
       
       CMD：就是command的缩写，造成此进程的触发程序的指令。
 
+      b.ps aux :
       
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root           1  0.5  0.1 167000 12312 ?        Ss   06:38   0:02 /sbin/init splash
+root           2  0.0  0.0      0     0 ?        S    06:38   0:00 [kthreadd]
+root           3  0.0  0.0      0     0 ?        I<   06:38   0:00 [rcu_gp]
+      可以看到 ps -l 与ps aux的结果不同，在ps aux中，各字段的含义：
+      USER：该process属于哪个使用者的账号；
+      PID：该process的进程标识符；
+      %CPU：该process使用调的CPU资源百分比；
+      %MEM：该process所占用的物理内存百分比；
+      VSZ：该process使用掉的虚拟内存量(Kbytes)；
+      RSS：该process占用的固定的内存量(Kbytes)；
+      TTY：该process是在那个终端机上面运作，若与终端机无关，则显示?，另外，tty1-tty6是本机上面的登入者进程，若为pts/0等等的，则表示为由网络连接进主机的进程。
+      STAT：该进程目前的状态，状态显示与 ps -l 的S旗标相同(R/S/D/T/Z)；
+      START：该process被触发启动的时间；
+      TIME：该process实际使用的CPU运作的时间；
+      COMMAND：该进程的实际指令。
+
       
+
+      c.僵尸进程(zombie)：
+        原因：因为该进程应该执行完毕，或者是因故障应该要终止了，但是该进程的父进程却无法完整的将该进程结束，而造成那个进程一直存在内存当中。如果某个进程的CMD后面还接上<defunct>时，就代表该进程是僵尸进程。
+	当系统不稳定时就容易造成所谓的僵尸进程，可能是因为程序写的不好，或者是使用者的操作习惯不良等等所造成的。如果你发现系统中很多僵尸进程时，要记得找出父进程，然后好好的做个追踪，好好的进行主机的环境优化。不要直接的kill，否则以后还是会产生的。
+	事实上，通常僵尸进程都已经无法管控，而直接是交给systemd这支程序来负责，偏偏systemd是系统第一支程序，是所有程序的父程序。我们无法杀掉该程序的。所以，如果产生了僵尸进程，而系统过一阵子还没有办法透过核心非经常性的特殊处理来将该进程删除时，就只好reboot来将该进程抹去。
+
+
+
+    2.top 动态观察进程的变化
+    相对于ps是擷取一个时间点的进程状态，top则可以持续侦测进程运作的状态。
+    
+    top [-d 数字] |top [-bnp]
+    选项与参数：
+    -d：后面可以接秒数，就是整个进程画面更新的描述，预设是5秒。
+    -b：以批次的方式执行top，还有更多的参数可以使用。通常会搭配数据流重导向来将批次的结果输出成为文件。
+    -n：与-b搭配，意义是，需要进行几次top的输出结果。
+    -p：制定某些个PID来进行观察检测。
+    
+    在top执行过程中，可以使用的按键指令：
+    ?：显示在top当中可以键入的按键指令
+    P：以CPU的使用资源排序显示
+    M：以Memery的使用资源排序显示
+    N：以PID来排序
+    T：有该Process是使用的CPU时间积累排序
+    k：给予某个PID一个讯号
+    r：给予某个PID重新制定一个nice值
+    q：离开top软件的按键。
+	
+	
+进程号 USER      PR  NI    VIRT    RES    SHR    %CPU  %MEM     TIME+ COMMAND
+6453   zcj       20   0 5769228 334072 143980 S  10.4   4.2   9:17.40 gnome-s+ 
+16636  zcj       20   0 3256212 229688 131712 S   3.6   2.9   2:34.64 clement+ 
+
+     PID：Process的ID；
+     USER：该process所属的使用者；
+     PR：Priority的简写，进程的优先执行顺序，越小越早被执行；
+     NI：Nice的简写，与Priority有关，越小越早被执行；
+     %CPU：CPU的使用率。
+     %MEM：内存的使用率。
+     TIME+：CPu使用时间的累加。
+
+
+
+    3.pstree ：
+    pstree [-A|U] [-up]
+
+    选项与参数：
+    -A：各进程之间的连接以ASCII字符来连接；
+    -U：各进程之间的连接以万国码的字符来连接，在某些终端接口下可能有错误；
+    -p：并同时列出每个process的PID；
+    -u：并同时列出每个process的所属账号名称；
