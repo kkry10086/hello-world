@@ -401,7 +401,7 @@ procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
        f.CPU的项目分别是：
          us：非内核层的CPU使用状态
 	 sy：内核层所使用的CPU状态
-	 id：闲置的装填
+	 id：闲置的状态
 	 wa：等待I/O所耗费的CPU状态
 	 st：被虚拟机(virtual machine)所使用的CPU状态（2.6.11以后才支持）
 
