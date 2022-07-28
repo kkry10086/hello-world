@@ -111,5 +111,16 @@ delete p;
 T* p=new T[n];
 vector<T> v(p,p+n);
 delete[] p;
-delete 旁边的[]是告知系统释放整个数组占用的内存，而不仅仅是释放其中一个元素的内存。一个数组一旦用new[]分配了内存，那么该内存将一直被使用知道程序终止或者执行了delete[] p语句。
+delete 旁边的[]是告知系统释放整个数组占用的内存，而不仅仅是释放其中一个元素的内存。一个数组一旦用new[]分配了内存，那么该内存将一直被使用知道程序终止或者执行了delete[] p语句。在释放数组之前，系统根据相反的顺序逐个释放数组中的每个元素。
+
+一个复制字符数组的程序。
+
+char * duplicate_chars(const char *p)
+{
+        //allocate enough memory especially '\0'
+        size_t length=strlen(p)+1;
+        char *result =new char[length];
+        std::copy(p,p+length,result);
+        return result;
+}
 
