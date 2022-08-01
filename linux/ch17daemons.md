@@ -49,10 +49,93 @@ at和atd，cron和crond这个d代表的就是daemon的意思。
   17.1.2systemd使用的unit分类
   现在改用systemd这个启动服务管理机制。systemd的好处：
   
+  a.平行处理所有服务，加速开机流程：
+    旧的init启动脚本是「一项一项任务依序启动」的模式，因此不相依的服务也是得要一个一个的等待。但目前我们的硬件主机系统与操作系统几乎都支持多核心架构了，因此systemd可以让所有的服务同时启动，然后，你会发现系统启动的速度便快了。
+    
+  b.一经要求就响应的on-demand启动方式：
+    systemd全部就是仅有一支systemd服务搭配systemctl指令来处理，无需其他额外的指令来支持。不详systemV还要init，chkconfig，service等等指令。此外，systemd由于常驻内存，因此任何要求(on-demand)都可以立即处理后续的daemon启动的任务。
+    
+  c.服务相依性的自我检查：
+    由于systemd可以自定义服务相依性的检查，因此如果B服务是架构在A服务上面启动的，那当你在没有启动A服务的情况下仅手动启动B服务时，systemd会自动帮你启动A服务。这样就可以免去管理员得要一项一项服务去分析的麻烦。
+    
+  d.依daemon功能分类：
+    systemd管理的服务非常多，为了厘清所有服务的功能，因此，首先systemd先定义所有的服务为一个服务单位(unit)，并将该unit归类到不同的服务类型去。旧的init仅分为stand alone 与super deamon所控制的 是在不够，systemd将服务单位(unit)区分为service，socket，target，path，snapshot，timer等多种不同的类型，方便管理员的分类与记忆。
+    
+  e.将多个deamons集合成为一个群组：
+    如同systemV的init有个runlevel的特色，systemd也将许多的功能集合成为一个所谓的target项目，这个项目主要在设计操作环境的建置，所以是集合了许多的daemons，亦即是执行某个target就是执行好多个daemon的意思。
+    
+  f.向下兼容旧有的init服务脚本：
+    基本上，sytemd是可以兼容init的启动脚本的，因此，旧的init启动脚本也能够透过systemd来管理，只是更进阶的systemd功能就没有办法支持了。
+
+  当然也有sytemd没法替代的部分：
+  1.在runlevel的对应上，大概仅有runlevel 1,3,5有对应到systemd的某些target类型而已，没有全部对应；
+  2.全部的systemd都用systemctl这个管理程序管理，而systemctl支持的语法有限制，不像/etc/init.d/daemon就是纯脚本可以自定义参数，systemctl不可自定义参数；
+  3.如果某个服务启动是管理员手动执行启动，而不是使用sytemctl去启动的，那么systemd将无法侦测到该服务，而无法进一步管理；
+  4.systemd启动过程中，无法与管理员透过standard input传入信息，因此自行撰写systemd的启动谁的嗯时，务必要取消互动机制。
+
+
+  。systemd的配置文件防止目录
+    基本上，systemd将过去所谓的daemon执行脚本通通称为一个服务单位(unit)，而每种服务单位依据功能来区分时，就分类为不同的类型。基本的类型有：系统服务(service)，数据监听与交换的插槽档服务(socket)，储存系统状态的快照类型(snapshot)，提供不同的类似执行等级分类的操作环境(target)等等。
+     其配置文件都放置在底下的目录中：
+     a./usr/lib/systemd/system/：每个服务最重要的启动脚本设定，有点类似以前的/etc/init.d底下的文件；
+     
+     b./run/systemd/system/：系统执行过程中所产生的服务脚本，这些脚本的优先序比/usr/lib/systemd/system高；
+     
+     c./etc/systemd/system/：管理员依据主机系统的需求所建立的执行脚本，这个目录有点像以前的/etc/rc.d/rc5.d/Sxx之类的功能。执行优先比/run/systemd/system高。
+
+     也就是说：系统开机会不会执行某些服务要看/etc/systemd/system/底下的设定，所以该目录下就是一大堆连结档。而实际执行的systemd启动脚本配置文件，其实都是放置在/etc/lib/systemd/system/底下。因此如果要修改某个服务启动的设定，应该去/usr/lib/systemd/system/底下去修改。/etc/systemd/system/仅是连结到正确的执行脚本配置文件而已。
+
+
+    。systemd的unit类型分类说明：
+    那/usr/lib/systemd/system/以下的数据如何区分不同的类型？看扩展名。举例来说，
+    ll /usr/lib/systemd/system |grep -E '(vsftpd|multi|cron)'
+    -rw-r--r--  1 root root   776 10月 10  2021 anacron.service
+    -rw-r--r--  1 root root   154 10月 10  2021 anacron.timer
+    -rw-r--r--  1 root root   319  3月 18  2021 cron.service
+    -rw-r--r--  1 root root   540  3月 11 20:48 multi-user.target	
+    drwxr-xr-x  2 root root   258  7月 16 10:39 multi-user.target.wants/
+    lrwxrwxrwx  1 root root    17  6月 28 02:28 runlevel2.target -> multi-user.target
+    lrwxrwxrwx  1 root root    17  6月 28 02:28 runlevel3.target -> multi-user.target
+    lrwxrwxrwx  1 root root    17  6月 28 02:28 runlevel4.target -> multi-user.target
+    -rw-r--r--  1 root root   248  2月 24 02:18 vsftpd.service
+    
+    vsftpd和crond都是系统服务(service)，而multi-user要算是执行环境相关的类型(target type)。
+
+
+
+|扩展名   |       主要服务功能                                                |
+|---------+------------------------------------------------------------------|
+| service +一般服务类型(service unit)：主要是系统服务，包括服务器本身所需要的本地|
+|         +服务以及网络服务都是。                                              |
+|---------+-------------------------------------------------------------------|
+|socket   +内部程序数据交换的插槽服务(socket unit)：主要是IPC(Inter-process com |
+|         +munication)的传输讯息插槽文件(socket file)功能。这种类型的服务通常在监|
+|         +控讯息传递的插槽文件，当有透过此插槽文件传递讯息来说要连接服务时，就依据|
+|         +当时的状态将该用户的要求传送到对应的daemon，若deamon尚未启动，则启动该 |
+|         +daemon后再传送用户的要求。                                           |
+|         +使用socket类型的服务一般是比较不会被用到的服务，因此在开机时通常会稍微 |
+|         +延迟启动的时间。一般用于本地服务比较多，例如我们的图形界面很多的软件都是|
+|         +透过socket来进行本机程序数据交换的行为。                             |
+|---------+--------------------------------------------------------------------|
+|target   +执行环境类型(target unit)：其实就是一群unit的集合，执行这个target就是 |
+|         +执行一堆其他的unit                                                  |
+|---------+-------------------------------------------------------------------|
+|mount    +文件系统挂载相关的服务(automount unit/mount unit)：例如来自网络的自动|
+|automount+挂载、NFS文件系统挂载等与文件系统相关性较高的程序管理                 |
+|---------+-------------------------------------------------------------------|
+|path     +侦测特定文件或目录类型(path unit)：某些服务需要侦测某些特定的目录来提供|
+|         +队列服务，例如最常见的打印服务，就是透过侦测打印队列目录来启动打印功能 |
+|---------+--------------------------------------------------------------------|
+|timer    +循环执行的服务(timer unit)：这个东西有点类似anacrontab。不过是由      |
+|         +systemd主动提供的，比anacrontab更加有弹性                            |
+|---------+--------------------------------------------------------------------|
 
 
 
 
+17.2透过systemctl管理服务
+
+  1.2.1透过systemctl管理单一服务(service unit)的启动/开机状态与观察状态
 
 
  
