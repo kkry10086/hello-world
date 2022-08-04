@@ -480,6 +480,7 @@ procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
   16.4.3 查询已开启文件或已执行进程开启之文件
 
   a.fuser：藉由文件（或文件系统）找出正在使用该文件的进程
+  
   当我们向知道一个进程在启动过程中开启了多少文件，就可以使用fuser观察。
   fuser [-umv] [-k[i] [-signal]] file/dir
   选项与参数：
@@ -510,6 +511,58 @@ procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
   如果想要查阅某个文件系统底下有多少进程正在占用文家系统时，使用-m会很有帮助。
   fuser -uv /proc
   无法umount时，我们可以fuser -mki /home 删除占用该文件系统的进程。
+
+  既然可以针对整个文件系统，也可以针对单一文件：
+  查找/run底下属于FIFO类型的文件：
+  find /run -type p:
+  /run/rpc_pipefs/gssd/clntXX/gssd
+  /run/user/1000/systemd/inaccessible/fifo
+  /run/initctl
+  ………………………………………………
+  /run/systemd/inhibit/1.ref
+  /run/systemd/sessions/2.ref
+  /run/systemd/inaccessible/fifo
+
+  然后根据上面fuser的使用方法，对其中一个文件使用：
+  fuser -uv /usr/initctl:
+                       USER        PID ACCESS COMMAND
+  /run/initctl:        root          1 F.... (root)systemd
+  通常系统的FIFO文件都会放置到/run下面。
+
+
+  
+  b.lsof：通过usernname列出被进程开启的文件档名
+  
+  相对于fuser是由文件或者装置去找出使用该文件或装置的进程，放过来说，如何查出某个进程开启或者使用的文件与装置，就是用lsof。
+
+  lsof [-aUu] [+d]
+  选项与参数：
+  -a：多项数据需要【同时成立】才显示出结果,即是所有的参数都要符合；
+  -U：仅列出Unix like系统的socket文件类型；
+  -u：后面接username，列出该使用者相关进程所开启的文件；
+  +d：后面接目录，亦即找出某个目录底下已经被开启的文件。
+
+
+
+  c.pidof：找出某支正在执行的程序的PID
+  
+  pidof [-sx] program_name
+  选项与参数：
+  -s：仅列出一个PID而不列出所有的PID；
+  -x：同时列出该program name可能的PPID那个进程的PID；
+
+
+16.5 SELinux初探
+  SELinux已经是个非常完备的核心模块，尤其是CentOS提供了很多管理SELinux的指令与机制。因此在整体架构上面是单纯且容易操作的。
+
+  16.5.1什么是SELinux
+  全名是【Security Enhanced Linux】，意义是安全强化的Linux。
+  强化的是：
+
+  a.当初设计的目标：避免资源的误用
+  
+ 
+  
 
   
   
