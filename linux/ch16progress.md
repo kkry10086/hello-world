@@ -626,14 +626,116 @@ procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
 
   如上所示，安全性文本主要使用冒号文为三段：
   Identify:role:type
-  身份识别：角色：类型
+
+身份识别：角色：类型
 
     （1）身份识别（Identify）：
-    （2）角色（role）：
-    （3）类型（type）：
+    。unconfined_u：不受限的用户，也就是说，该文件来自于不受限的进程所产生的。一般来说，我们使用可登入账号来取得bash之后，预设的bash环境是不受SELinux管制的。因为bash并不是特别的网络服务。因此，在这个不受SELinux所限制的bash进程所产生的文件，其身份识别大多就是unconfined_u。
+    。system_u：系统用户，大部分是系统自己产生的文件。
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    刚写到这里我就有个疑问，我在前面的我使用ps/0产生的文件都是systemd
+    _u类型的。详情可以看前面的，那些都是cpp文件。当然也有可能是因为我
+    是最近才装的SELinux，所以这些文件都是这个样子的。
+    验证后，即从网上下载和自己生成的文件都是unconfined_u。而之前我产生的
+    文件会是system_u是因为在那之前我的系统还没有安装SELinux。
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
+    （2）角色（Role）：
+    透过角色字段，我们可以知道这个资料属于进程、文件资源还是代表使用者。一般角色有：
+    。object_r：代表的是文件或目录等文件资源。
+    。system_r：代表的就是进程。不过一般使用者也会被指定成为system_r。
+    
+    （3）类型（type）：
+    在预设的targetd政策中，Identify与Role字段基本上是不重要的。重要的是类型字段。基本上，一个主体进程能不能读取到这个文件资源，与类型字段有关。类型字段在文件与进程的定义不太相同，分别是：
+    。type：在文件资源(Object)上面成为类型(Type)；
+    。domain：在主体进程(Subject)则成为领域(domain)；
+    
+  
+    我们先来了解主体进程在这三个字段的意义：
+    ps -eZ
+    LABLE                               PID TTY        TIME    CMD
+    system_u:system_r:init_t:s0           1 ?        00:00:04 systemd
+    system_u:system_r:kernel_t:s0         2 ?        00:00:00 kthreadd
+
+    身份识别：unconfined_u |角色：unconfined_r：
+    一般可登入使用者的进程。类似没有受限的进程。大多数都是用户已经顺利登入系统后，所用来操作系统的进程。如bash,X window相关软件等。
+
+    身份识别：system_u|角色：system_r：
+    由于为系统账号，因此是非交谈式的系统运作进程，大多数的系统进程据是这种类型的。
+
+    如上所述，其实最终要的字段是类型字段(Type)，主体与目标之间是否具有可以读写的权限，与进程的domain及文件的type有关。可以通过/usr/sbin/cron，/etc/crontab，/etc/cron.d等文件来说明。
+
+     ps -eZ |grep cron
+     system_u:system_r:crond_t:s0-s0:c0.c1023 3043 ?  00:00:00 cron
+     system_u:system_r:crond_t:s0-s0:c0.c1023 3240 ?  00:00:00 atd
+
+     可以看到类型是crond_t。
+     在来看看执行档，配置文件的安全文本内容：
+     
+     ll -Zd /usr/sbin/cron /etc/crontab /etc/cron.d
+     drwxr-xr-x. 2 root root system_u:object_r:system_cron_spool_t:s0    60  7月 14 15:07 /etc/cron.d/
+    -rw-r--r--. 1 root root system_u:object_r:system_cron_spool_t:s0  1136  8月  6  2021 /etc/crontab
+    -rwxr-xr-x. 1 root root system_u:object_r:crond_exec_t:s0        51792  3月 23 21:49 /usr/sbin/cron*
+    
+     当我们执行/usr/sbin/cron之后，这个程序变成的进程的domain类型会是cron_t。而这个cron_t能够读取的配置文件则为system_cron_spool_t的类型。因此不论/etc/crontab，/etc/cron.d以及/var/spool/cron都会是相关的SELinux类型。
+     实际执行：
+     ！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+     我还不会用emacs作图，因此，我以后再来修改。
+     ！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+
+     用文字描述：
+     a.首先，我们触发一个可执行的目标文件，那就是具有crond_exec_t这个类型的/usr/sbin/cron文件；
+     b.该文件的类型会让这个文件所造成的主体进程(Subject)具有cron这个领域(domain)，我们的政策针对这个领域已经执行了许多规则，其中包括这个领域可以读取的目标资源类型；
+     c.由于cron domain被设定为可以读取system_cron_spool_t这个类型的目标文件(Object)，因此你的配置文件放到/etc/cron.d就能够被cron这支进程所读取；
+     d.但最终能不能读取到正确的资料，还得看rwx是否符合Linux权限的规范。
 
 
+     其上有几个重点：
+     第一个是政策内需要制定详细的domain/type相关性；第二个是若文件的type设定错误，那么即使设定为rwx全开的777,该主体进程也无法读取目标文件资源。降低了资源误用的可能性。
+
+
+     之后可以看相关的测试，鸟哥的相关位置就有。而且我这里也有进行测试，首先在打开日志功能后，在/etc/cron.d生成checktime文件，之后用ls -lZ看到其(Type)是system_cron_spool_t，说明其是可以读取的，同时日志文件也没有相关的信息。因此是可以成功使用的。与鸟哥书籍里面的有所不同。不同的原因是我是直接在/etc/cron.d里面生成的，其类型是system_cron_spool_t，而在/home/×××里面生成的类型就是user_home_t，在移动到/etc/cron.d里面的类型不变，所以会出现问题。
+     因此类型是在文件产生时就出现，且不会随着移动而发生改变的。
+
+
+  16.5.3 SELinux三种模式的启动、关闭与观察
+  并非所有的Linux distributions都支持SELinux的，所以要自己观察自己的系统是否支持。我使用ubuntu22支持，但要自己下载。
+  共有三种模式：
+  。enforcing：强制模式，代表SELinux运作中，且已经正确的开始限制domain/type了；
+  。permissive：宽容模式，代表SELinux运作中，不过仅会有警告信息并不会有实际限制domain/type的存取。这种模式可以运来作为SELinux的debug使用；
+  。disabled：关闭，SELinux并没有实际运作。
+
+  而在SELinux中并不是所有的进程都会被SELinux所管制，因此最左边会出现一个所谓「有受限的进程主体」。那如何观察有没有受限(confined)？透过ps -eZ。
+   ps -eZ |grep -E 'cron|bash'
+   system_u:system_r:crond_t:s0-s0:c0.c1023 2817 ?  00:00:00 cron
+   system_u:system_r:crond_t:s0-s0:c0.c1023 2974 ?  00:00:00 atd
+   unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023 11306 pts/0 00:00:00 bash
+
+   我们可以看到type这里有一个unconfined_t，也就是说bash这个命令没有受到SELinux的限制。
+   三种模式的运作：
+   Disabled：那么SELinux将不会运作，当然受限的进程也不会经过SELinux，也就是直接去判断rwx而已。
+   permissive：不会将主体进程抵挡，不过万一没有通过政策规则，或者安全文本的对比时，那么该读写动作将会被记录起来，可作为未来检查问题的判断依据。
+   Enforcing：就是实际将受限主体进入规则比对、安全文本比对的流程，若失败，就直接抵挡主体进程的读写行为，并且将他记录下来。如果通通没问题，这才进入到rwx的判断。
+
+   查看SELinux的模式：
+   getenforce：
+   Permissive（这是我的电脑目前的情况）。
+
+   如何知道SELinux的政策(Policy)：
+   sestatus [-vb]
+   选项与参数：
+   -v：检查列于/etc/sestatus.conf内的文件与进程的安全性文本内容；
+   -b：将目前政策的规则布尔值列出，以及某些规则(rule)是否要启动(0/1)之意；
+
+   SELinux模式在enforcing或permissive之间切换的方法：
+   setenforce [0|1]
+   选项与参数：
+   0：转成permissive
+   1：转成Enforcing
+   但是在我的系统中没有用。可能是没有重启，因为SELinux是整合到核心里面，所以要重启才能看到。
+
+   Tips：在某些特殊的情况下，从diabled切换成Enforcing之后，会有一堆的服务无法顺利启动，都会跟我们说在/lib/xxx里面的数据没有权限读取，所以启动失败。这大多数是由于在重新写入SELinux type(Relabel)出错的原因。使用Permissibe就没有这个错误，而处理方式就是：使用「restorecon -Rv /」重新还原所有SELinux的类型。
+   
 
 
 
