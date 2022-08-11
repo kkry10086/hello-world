@@ -759,13 +759,67 @@ procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
     -t：列出SELinux的所有类别(type)种类；
     -b：列出所有规则的种类（布尔值）；
 
-    search [-A] [-a 主体类别] [-t 目标类别] [-b 布尔值]
+    sesearch [-A] [-s 主体类别] [-t 目标类别] [-b 布尔值]
     选项与参数：
     -A：列出后面数据中，允许「读取或放行」的相关数据；
     -t：后面还要接类别，例如 -t httpd_t；
     -b：后面还要接SELinux的规则，例如 -b httpd_enable_ftp_server；
     
-    
+    主体类别指的是【主体（进程）】的类型（type）；
+    目标类别：【目标（文件或目录）】的类型（type）；
+    布尔值：指的是政策下的规则（rule）的布尔值；
+
+    sesearch -A　-s crond_t |grep spool：
+    allow crond_t cron_spool_t:dir { add_name getattr ioctl lock open read remove_name search watch write };
+    allow crond_t cron_spool_t:file { append create getattr ioctl link lock open read rename setattr unlink write };
+    allow crond_t cron_spool_type:file { getattr ioctl lock open read };
+    allow crond_t system_cron_spool_t:dir { getattr ioctl lock open read search watch };
+    ……………………………………………………………………………………………………………………
+
+    在上面的数据中，我们使用-s来查询进程为crond_t可以读取文件，在用spool作为筛选的关键字，得到的数据，就是crond_t可以读取的文件的type，后面括号里面的是能够做的操作。
+
+
+    我们看看httpd_enable_homedirs到底是什么：
+    使用semanage：
+    semanage boolean -l |grep httpd_enabled_homedirs
+    httpd_enable_homedirs          (off  ,  off)  Determine whether httpd can traverse user home directories.
+    这里可以看到这个规则的确可以使httpd的类型的进程去读取读取目录。
+
+    使用sesearch -A　-b httpd_enabled_homedirs 可以该规则下面所有的主体与目标之间的关系。
+    sesearch -A -b httpd_enabled_homedirs |grep user_home_dir_t：
+    allow httpd_suexec_t user_home_dir_t:dir { getattr open search }; [ httpd_enable_homedirs ]:True
+    allow httpd_sys_script_t user_home_dir_t:dir { getattr open search }; [ httpd_enable_homedirs ]:True
+    allow httpd_t user_home_dir_t:dir { getattr open search }; [ httpd_enable_homedirs ]:True
+    allow httpd_user_script_t user_home_dir_t:dir { getattr open search }; [ httpd_enable_homedirs ]:True
+
+
+  。修改SELinux规则的布尔值 setsebool
+  setsebool [-P] [规则名称] [0|1]
+  选项与参数：
+  -P：直接将设定值写入配置文件，该设定数据未来会生效的；
+
+
+  16.5.5SELinux安全文本的修改
+  我们要学会自己修改文件的type以达到让文件可以被正确的读取。
+  使用chcon手动修改文件的SELinux type
+  chcon [-R] [-t type] [-u user] [-r role] 文件
+  chcon [-R] --reference=范例文件 文件
+
+  选项与参数：
+  -R：连通该目录下的次目录也同时修改；
+  -t：后面接安全性文本的类型字段。
+  -u：后面接身份识别，例如system_u；
+  -r：后面接角色，录入system_r；
+  -v：若有变化成功，请将变动的结果列出来；
+  --reference=范例文件：将某个文件当范例来修改后续接的文件的类型。
+
+  但是这个方式有一些问题，因为我们要知道文件需要的类型，或者文件应该存储的位置，不过我们可以让SELinux自己解决默认目录下的SELinux type。
+
+   。使用resrorecon让文件恢复正确的SELinux type
+   restorecon [-Rv] 文件或目录
+   选项与参数：
+   -R:连通次目录一起修改；
+   -v:将过过程显示到屏幕上。
   
 
 
