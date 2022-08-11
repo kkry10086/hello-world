@@ -820,6 +820,17 @@ procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
    选项与参数：
    -R:连通次目录一起修改；
    -v:将过过程显示到屏幕上。
+
+   。semanage默认目录的安全性文本查询与修改
+   那么restorecon为什么可以「恢复」原本的SELiux type？因为有个地方记录每个文件/目录的SELinux的默认类型。那么我们要如何查询预设的SELinux type以及如何增加/修改/删除预设的SELinux type。
+   semanage {login|use|port|interface|fcontext|translation} -l
+   semanage fcontext -{a|d|m} [-first] file_spec
+   选项与参数：
+   fcontext：主要用在安全性文本方面的用途，-l为查询的意思；
+   -a：增加的意思，你可以增加一些目录的默认安全性文本类型设定；
+   -m：修改的意思；
+   -d：删除的意思；
+   
   
 
 
