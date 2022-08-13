@@ -830,6 +830,15 @@ procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
    -a：增加的意思，你可以增加一些目录的默认安全性文本类型设定；
    -m：修改的意思；
    -d：删除的意思；
+   这里的用法最好自己去试试。
+
+  16.5.6 一个网络服务案例及登陆文件协助
+  我们如何知道系统因为SELinux的问题导致网络服务不对劲。此时就auditd和setroubleshooted两个服务。
+  setroubleshoot-->错误讯息写入/var/log/messages
+  几乎所有SELinux相关的程序都会以se为开头，而troubleshoot是错误克服的意思。
+  这个服务会将关于SELinux的错误讯息与克服方法记录到/var/log/messagesyu /var/log/setroubleshoot/*里面。所以一定要启动这个服务。要安装两个软件：setroubleshoot和setroubleshoot-server。我使用ubuntu没有这两个软件。之后有机会再说。但是有auditd这个服务。
+
+  
    
   
 
