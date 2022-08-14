@@ -172,6 +172,47 @@ at和atd，cron和crond这个d代表的就是daemon的意思。
   systemctl mask xx
   mask这些动作本质就是修改具有大量连接档的/etc/systemd/system。
   mask就是将软连接的xx连接到/dev/null而不是真正的文件。
+
+  17.2.2 透过systemctl观察系统上所有的服务
+  如何查看所有的服务。
+  systemctl [command] [--type=TYPE] [--all]
+  command：
+    list-units：依据unit列出目前有启动的unit。若加上--all才会列出没启动的。
+    list-unit-files：依据/usr/lib/systemd/system/内的文件，将所有文件列表说明。
+
+  --type=TYPE：就是之前提到的unit type，主要有service，socket，target等。
+  sudo systemctl list-units --type=service
+  UNIT                                                  LOAD   ACTIVE SUB     D>
+  accounts-daemon.service                               loaded active running A>
+  acpid.service                                         loaded active running A>
+  alsa-restore.service                                  loaded active exited  S>
+  在这里，
+  UNIT：项目的名称，包括各个unit的类别；
+  LOAD：开机时是否会被加载，默认systemctl显示的是加载的项目而已；
+  ACTIVE：目前的状态，须与后续的SUB搭配。
+  SUB：就是与active一起配合的。
+
+
+  17.2.3透过systemctl管理不同的操作环境(target unit)
+  使用sudo systemctl list-units --type=target --all
+  可以看到所有target类型的服务，但是跟操作界面相关性比较高的target有底下几个：
+    。graphical.target：就是文字加上图形界面，这个项目已经包含了底下的multi-user.target。
+    。multi-user.target：纯文本模式。
+    。rescure.target：在无法使用root登入的情况下，systemd在开机时会多加一个额外的暂时系统，与你原本的系统无关。这时你可以取得root的权限来维护你的系统。但是这是额外系统，因此可能需要使用chroot的方式来取得你原有的系统。
+    。emergency.target：紧急处理系统的错误，还是需要使用root登入的情况，在无法使用rescure.target时，可以尝试使用这种模式。
+    。shutdown.target:就是关机的流程。
+    。getty.target：可以设定你需要几个tty之类的，如果想要降低tty的项目，可以修改这个的配置文件。
+    正常的模式是multi-user.target以及graphical.target。救援方面的模式主要有rescur.target以及更加严重的emergency.target。如果要修改可提供登入的tty数量，则修改getty.target项目。基本上，我们最常用的就是multi-user.target和graphical.target。
+    关于上面两个项目的操作：
+    systemctl [command] [unit.target]
+    选项与参数：
+    get-default：取得目前的target；
+    set-default：设定后面接的target成为默认的操作模式；
+    isolate：切换到后面接的模式；
+    multi-user与graphical两种模式是非冲突的，从开启上面，graphical开启需要multi-user先开启。但是我们这里的set-default选择的类型会改变是否开启graphical。
+    而set-default这个命令其实也就是修改/etc/systemd/system/default.target的符号连接的对象，在/usr/lib/systemd/system/multi-user.target和/usr/lib/systemd/system/graphical.target之间。
+    
+  
     
 
 
