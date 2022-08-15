@@ -211,8 +211,103 @@ at和atd，cron和crond这个d代表的就是daemon的意思。
     isolate：切换到后面接的模式；
     multi-user与graphical两种模式是非冲突的，从开启上面，graphical开启需要multi-user先开启。但是我们这里的set-default选择的类型会改变是否开启graphical。
     而set-default这个命令其实也就是修改/etc/systemd/system/default.target的符号连接的对象，在/usr/lib/systemd/system/multi-user.target和/usr/lib/systemd/system/graphical.target之间。
+    注意：改变praphical和multi-user是透过isolate来处理的。在service类型的情况下，使用start/stop/restart才是正确。但是在target这种类型下，使用isolate才是正确的，因为target本质是多个unit的组合，你stop时，会关闭哪个unit？而且这个target关闭后，不代表另一个target会以你想要的方式开启。
+    在正常的切换下，使用上述的isolate的方式即可。不过为了方便起见：systemd也提供了数个简单的指令给我们切换操作模式使用：
+    systemctl poweroff 系统关机
+    systemctl rebokot  重新启动
+    systemctl suspend  进入暂停状态
+    systemctl hibernate进入休眠状态
+    systemctl rescue    强制进入救援模式
+    systemctl emergency强制进入紧急救援模式
+
+    这里我们了解以下暂停模式和休眠模式：
+     。suspend：暂停模式会将系统的状态数据保存到内存中，然后关闭掉大部分的系统硬件，当然，并没有实际关机。当用户按下唤醒机器的按钮，系统数据会从内存中恢复，然后重新驱动被大部分关闭的硬件，就开始正常运作。
+     。hibernate：休眠模式则是将系统状态保存到硬盘中，保存完毕后，将计算机关机。当用户尝试唤醒系统时，系统会开始正常运作，然后将保存在硬盘中的系统状态恢复回来。因为数据是有硬盘读出的，因此唤醒的效能与读取硬盘速度有关。
+
+
+  17.2.4透过systemctl分析各服务之间的相依性
+  systemd具有相依性的问题克服，那么如何追踪某一个unit的相依性。我们怎么知道graphical会用到multi-user呢？
+  systemctl list-dependencies [unit] [--reverse]
+  选项与参数：
+  --reverse：反向追踪谁使用这个unit的意思。
+
+
+  17.2.5与systemd的daemon运作过程相关的目录简介
+  那么有那些目录跟系统的daemon运作有关？基本上：
+  /usr/lib/systemd/system/：
+    默认的启动脚本配置文件都放在这里，这里的数据尽量不要修改，要修改时，请到/etc/systemd/system下修改较佳。
     
+  /run/systemd/system/：系统执行过程中所产生的服务脚本，这些脚本的优先序要比/usr/lib/systemd/system高。
   
+  /etc/systemd/system/：管理员依据主机系统的需求所建立的执行脚本，其实这个目录有点像以前/etc/rc.d/rc5.d/Sxx之类的功能。执行优先序又比/run/systemd/systemd高。
+  
+  /etc/sysconfig/*：几乎所有的服务都会将初始化的一些选项设定写入到这个目录下，举例来说，mandb所要更新的man page索引中，需要加入的参数就写入到此目录下的man-db当中。而网络的设定则卸载/etc/sysconfig/network-scripts/这个目录中。
+
+  /var/lib/：一些会产生数据的服务都会将他的数据写入到/var/lib/目录中。
+  
+  /run/：放置了好多daemon的暂存档，包括lock file以及PID file等等。
+
+
+  我们的systemd里面有很多的本机会用到的socket服务，里头可能会产生更多的socket file。那么这些socket file在哪里？我们可以透过systemctl来控制。socket本来就是unit的一种类型。
+  systemctl list-sockets
+  LISTEN                       UNIT                            ACTIVATES         >
+/run/acpid.socket            acpid.socket                    acpid.service
+/run/avahi-daemon/socket     avahi-daemon.socket             avahi-daemon.servi>
+/run/cups/cups.sock          cups.socket                     cups.service
+/run/dbus/system_bus_socket  dbus.socket                     dbus.service
+
+  。网络服务与端口对应简介
+  系统所有的功能都是某些程序所提供的，而进程都是透过触发程序来产生的。同样，系统提供的网络服务当然也是这样的。
+  为了网络连接的顺利，就有了协议，约定服务与接口的默认的一对一关系，接口其实并不是真的存在的，实际是有系统虚拟而成的，类似文件中的info文件。
+  那么系统上面设定可以让服务与port对应在一起的文件就是：/etc/services。
+  cat /etc/services：
+  tcpmux		1/tcp				# TCP port service multiplexer
+  echo		        7/tcp
+  echo		        7/udp
+  discard		9/tcp		sink null
+  discard		9/udp		sink null
+  systat		11/tcp		users
+  
+  第一栏是daemon的名称，第二栏为该daemon所使用的端口号与网络数据封包协议，封包协议主要为可靠联机的TCP封包以及较快速但为非面向连接的UDP封包。
+  虽然有的时候你可以藉由修改/etc/services来更改一个服务的port，但是不建议，因为可能会造成协议的错误。
+
+  17.2.6关闭网络服务
+  当你第一次使用systemctl去观察本地服务器启动的服务时，我们会发现有上百个的服务。而这里要讲的是网络服务。虽然网络服务默认有SELinux管理，但我们还是建议非必要的网络服务就关闭。基本上，会产生一个网络监听端口的程序，这个可以称为服务。
+  netstat -tlunp
+  Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
+  tcp        0      0 127.0.0.1:631           0.0.0.0:*               LISTEN      3589/cupsd          
+  tcp        0      0 0.0.0.0:25              0.0.0.0:*               LISTEN      6673/master         
+  tcp        0      0 127.0.0.53:53           0.0.0.0:*               LISTEN      2528/systemd-resolv 
+  udp        0      0 0.0.0.0:5353            0.0.0.0:*                           3158/avahi-daemon:  
+  udp        0      0 0.0.0.0:51052           0.0.0.0:*                           3158/avahi-daemon:  
+  udp6       0      0 :::48906                :::*                                3158/avahi-daemon:  
+  udp6       0      0 :::5353                 :::*      
+
+  在这里我们至少开了53,25,631等的port但是其中可以看到5353,48906等都是由acahi-daemon来开启的。接下来我们使用systemctl 来观察。
+  sudo systemctl list-units --all |grep avahi
+  avahi-daemon.service                                                                     loaded    active   running   Avahi mDNS/DNS-SD Stack
+  avahi-daemon.socket                                                                      loaded    active   running   Avahi mDNS/DNS-SD Stack Activation Socket
+  avahi-daemon的目的是在局域网络进行类似网络邻居的查找，因此这个服务可以协助你在局域网内随时了解网络邻居的即插即用设备。
+  既然不需要用到那么就关掉。
+  关掉，并且确定disabled。这里有两个。
+  一般来说，本地服务器至少需要25port，而22pport则最好加上防火墙来管理远程联机登入比较好。因此除了我们需要的其他都给关掉。
+
+
+17.3systemctl针对service类型的配置文件
+
+  以前，我们想要建立系统服务，就要到/etc/init.d/底下去建立相对应的bash shell script来处理。现在systemd的环境下，又该如何处理。
+  17.3.1systemctl配置文件相关目录简介
+  systemd的配置文件大部分放置于/usr/lib/systemd/system/目录内，但是该目录内份额文件主要是原本软件所提供的设定，建议不要修改。最好是去修改连接档的/etc/systemd/system/目录。
+  如果我们要额外修改vsftpd.service的话，RedHat建议要放置到的地方：
+  。/usr/lib/systemd/system/vsftpd.service：
+    官方释出的预设配置文件；
+  。/etc/systemd/system/vsftpd.serviec.d/custom.conf：
+  在/etc/systemd/system底下建立与配置文件相同文件名的目录，但是要加上.d的扩展名。
+  。
+  。
+
+  
+   
     
 
 
