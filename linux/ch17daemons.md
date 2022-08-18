@@ -214,7 +214,7 @@ at和atd，cron和crond这个d代表的就是daemon的意思。
     注意：改变praphical和multi-user是透过isolate来处理的。在service类型的情况下，使用start/stop/restart才是正确。但是在target这种类型下，使用isolate才是正确的，因为target本质是多个unit的组合，你stop时，会关闭哪个unit？而且这个target关闭后，不代表另一个target会以你想要的方式开启。
     在正常的切换下，使用上述的isolate的方式即可。不过为了方便起见：systemd也提供了数个简单的指令给我们切换操作模式使用：
     systemctl poweroff 系统关机
-    systemctl rebokot  重新启动
+    systemctl reboot  重新启动
     systemctl suspend  进入暂停状态
     systemctl hibernate进入休眠状态
     systemctl rescue    强制进入救援模式
@@ -302,13 +302,99 @@ at和atd，cron和crond这个d代表的就是daemon的意思。
   。/usr/lib/systemd/system/vsftpd.service：
     官方释出的预设配置文件；
   。/etc/systemd/system/vsftpd.serviec.d/custom.conf：
-  在/etc/systemd/system底下建立与配置文件相同文件名的目录，但是要加上.d的扩展名。
-  。
-  。
+  在/etc/systemd/system底下建立与配置文件相同文件名的目录，但是要加上.d的扩展名。然后在该目录下建立配置文件即可。另外，配置文件最好附档名取名为.conf较佳。在这个目录下的文件会「累加其他设定」进入/usr/lib/systemd/system/vsftpd.service。
+ 
+  。/etc/systemd/system/vsftpd.service.wants/*：
+    此目录内的文件为链接档，设定相依服务的连接。意思是启动了vsftpd.service之后，最好再加上这目录建议的服务。
+    
+  。/etc/systemd/system/vsftpd.service.requires/*：
+    此目录内的文件为链接档，设定相依服务的连接。意思是启动vsftpd.service之前，需要事先启动的服务。
+
+  基本上，在配置文件里面你都可以自由设定相依服务的检查，并且设定加入到那些target里面。但是如果是已经存在的配置文件，或者是官方提供的配置文件，Red Hat是建议你不要修改原设定，而是到上面提到的几个目录去进行额外的客制化设定比较好。当然最后还是由你自己决定。
+
+  17.3.2 systemctl配置文件的设定项目简介
+  了解配置文件的相关目录与文件之后，就是了解配置文件本身的内容。用sshd.service来作例子。
+  cat /usr/lib/systemd/system/ssh.service
+  [Unit]
+  Description=OpenBSD Secure Shell server
+  Documentation=man:sshd(8) man:sshd_config(5)
+  After=network.target auditd.service
+  ConditionPathExists=!/etc/ssh/sshd_not_to_be_run
+
+  [Service]
+  EnvironmentFile=-/etc/default/ssh
+  ExecStartPre=/usr/sbin/sshd -t
+  ExecStart=/usr/sbin/sshd -D $SSHD_OPTS
+  ExecReload=/usr/sbin/sshd -t
+  ExecReload=/bin/kill -HUP $MAINPID
+  KillMode=process
+  Restart=on-failure
+  RestartPreventExitStatus=255
+  Type=notify
+  RuntimeDirectory=sshd
+  RuntimeDirectoryMode=0755
+
+  [Install]
+  WantedBy=multi-user.target
+  Alias=sshd.service
+
+  [unit]这个项目与此unit的解释、执行服务相依性有关
+  [service]这个项目与实际执行的指令参数有关
+  [install]这个项目说明此unit要挂载那个target底下
+
+  至于配置文件内有些规则还是要说明一下：
+  。设定项目通常是可以重复的，例如我可以设定两个after在配置文件中，不过，后面的设定会取代前面的。如果想要将设定归零，可以使用类似「After=」的设定。
+  。如果设定参数需要由「是/否」的项目，你可以使用1,yes，true，on代表启动，用0,no，false，off代表关闭。
+  。空白行、开头为#或;的那一行，都代表批注。
+
+   a.unit部分：
+   Description：就是当我们使用systemctl list-units时，会输出给管理员看的建议说明。当然，status 也可以看到。
+   Documentation：这个项目提供管理员能够进行进一步的文件查询的功能。
+   例如：Documentation=http://...
+         Documentation=man:ssh(8)
+	 Documentation=file:/etc/ssh/sshd_config
+
+   After：说明此unit是在哪个daemon启动之后才启动的意思。基本上仅是说明服务启动的顺序而已，并没有强制要求里头的服务一定要启动后此unit才能启动。以ssh的内容为例，after后面由network.target以及ssh-eygen.service，但是若这两个unit没有启动而强制启动sshd.service的话，那么sshd.service应该还是能够启动的。
+   Befor：与After的意义相反，是在什么服务启动前最好启动这个服务的意思。不过这仅是规范服务启动的顺序，并非强制要求的意思。
+   Requires：明确的定义此unit需要在哪个daemon启动后才能够启动。就是设定相依服务。如果此项设定的前导服务没有启动，那么此unit就不会被启动。
+   Wants：与Requires刚好相反，规范的是这个unit之后最好还要启动什么服务比较好的意思。不过，并没有明确的规范就是了。主要的目的是希望建立让使用者比较好操作的环境。因此，这个Wants后面接的服务如果没有启动，不会影响到这个unit本身。
+   Conflicts：代表冲突的服务。亦即这个项目后面接的服务如果由启动，那么我们这个unit本身就不能启动。我们unit有启动，则此项目后的项目就不能启动。
 
   
-   
-    
+  b.service
+  Type：说明这个daemon启动的方式，会影响ExecStart。有以下几种类型；
+   。simple：默认值，这个daemon主要由ExecStart接的指令串来启动，启动后常驻于内存中。
+   。forking：由ExecStart启动的程序透过spawns延伸出其他子程序来作为此daemon的主要服务。原生的父程序在启动结束后就会终止运作。传统的unit服务大多属于这种项目，例如httpd这个www服务，当httpd的程序因为运作过久因此即将终结了，则systemd会再重新生出另一个子程序持续运作后，再将父程序删除。
+   。oneshot：与simple类似，不过这个程序在工作为完毕后就结束了，不会常驻在内存中。
+   。dbus：与simple类似，但这个daemon必须要在取得一个D-Bus的名称后，才会继续运作。因此设定这个项目时，通常也要设定BusName=xxx才行。
+   。idle：与simple类似。意思是，要执行这个daemon必须要所有的工作都顺利执行完毕才会执行。这类的daemon通常是开机到最后才执行即可的服务。
 
+  EnvironmentFile：可以指定启动脚本的环境配置文件。例如ssh的配置文件写入到/etc/sysconfig/sshd档和总，也可以在后面接多个不同的Shell变量来给予设定。
+  ExecStart：就是实际执行此daemon的指令或脚本程序。你也可以使用ExecStartPre（之前）以及ExecStartPost（之后）两个设定项目来在实际启动服务前，进行额外的指令行为。但是你得要特别注意的是，指令串仅接受「指令 参数 参数 ...」的格式，不能接受<,>,>>,|,&等特殊字符，很多的bash语法也不支持。所以要使用这些特殊字符时，最好直接写入到指令脚本里面去。不过上述的语法也不是完全不能用，若要支持比较完整的bash语法，那你得要使用Type=oneshot才行。
+  ExecStop：与systemctl stop的执行有关，关闭此服务时所进行的指令。
+  ExecReload：与systemctl reload有关的指令行为。
+  Restart：当设定Restart=1时，则当此daemon服务终止后，会再次的启动此服务。举例来说，如果你在tty2使用文字界面登入，操作完毕后注销，基本上，这个时候tty2就已经结束服务了。但是你会看到屏幕又立刻产生一个新的tty2的登入界面等待你的登入。这就是Restart的功能，除非使用systemctl强制将此服务关闭，否则这个服务会源源不断的一直重复产生。
+  RemainAfterExit：当设定为RemainAfterExit=1时，则当这个daemon所属的所有程序都终止之后，此服务会再尝试启动。这对于Type=oneshot的服务很有帮助。
+  TimeoutSec：若这个服务在启动或者关闭时，因为某些缘故导致无法顺利「正常启动或正常结束」的情况下，则我们要等多久才进入「强制结束的状体」。
+  KillMode：可以时process，control-group，none的其中一种，如果时process则daemon终止时，只会终止主要的程序（ExecStart接的后面的那串指令），如果时control-group时，则由此daemon所产生的其他control-group的程序，也都会被关闭。如果时none，则没有程序会被关闭。
+  RestartSec：与Restart有点相关性，如果这个服务被关闭，然后需要重新启动时，大概需要sleep多少实践再重新启动的意思。预设时100ms。
+  
+
+  c.「install」
+  WantedBy：这个设定后面接的大部分时*.target unit。这个unitn本身是附挂再某一个target unit底下。一般来说，大多的服务性质的unit都是附挂在multi-user.target底下。
+  Also：当这个unit本身被enable时，Also后面接的unit也会enable的意思。也就是具有相依性的服务可以写在这里。
+  Alias：进行一个连结的别名的意思。当systemctl enable相关的服务时，则此服务会进行连接档的建立。以multi-user.target为例，这个家伙是用来作为预设操作环境default.target的规划，因此当你设定用！！！这里电子书明显有问题，等下看纸质书。
+
+  17.3.3 两个vsftpd运作的实例
+  我们可能需要在vsftod使用到两个port，分别是21以及555；在这两个port都启用的情况下，我们就需要两个配置文件以及两个启动脚本设定了。
+  现在假设是：
+    。预设的port21：使用/etc/vsftpd/vsftpd.conf配置文件，以及/usr/lib/systemd/system/vsftpd.service设定脚本；
+    。预设的port555：使用/etc/vsftpd/vsftpd2.conf配置文件，以及/usr/lib/systemd/system/vsftpd2.service设定脚本；
+!!!这里是centos的，但是在ubuntu里面：/etc/vsftpd.conf；
+
+这里自己看书，自己配置文件的修改等。
+
+17.3.4 多重的重复设定方式：以getty为例
+  
 
  
