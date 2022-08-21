@@ -174,7 +174,7 @@ public:
   const_iterator end() const {return limit;}
 
   //11.3.1
-  Vec(const Vec& V);//复制构造函数
+  Vec(const Vec& v){create()v.begin(),v.end();};//复制构造函数
   Vec(){create();}
   explicit Vec(size_type n ,const T& val=T()){create(n,val);}
   //其他保留接口
@@ -184,4 +184,65 @@ private:
 
 };
 
+
+  11.3.2赋值运算符
+  在一个类的定义中必须详细描述在类被复制时要进行什么操作，类似的，在类的定义中还必须描述赋值(assignment)的具体操作。一个类中可以定义几种不同的赋值运算符，其中以一个指向类自身的常量引用作为参数的版本比较特殊：
+  它定义了在把一个自定义类型值赋给另一个自定义类型的操作。像指引运算符一样，赋值运算符也必须是类的一个成员函数，赋值运算符也必须返回一个值。
+  为了与c++自带的赋值运算符一致，我们让它返回左操作数的引用。
   
+  template <class T> class Vec
+{
+public:
+  //11.2.3
+  typedef T* iterator;
+  typedef const T* const_iterator;
+  typedef size_t size_type;
+  typedef T value_type;
+  //......
+  //11.2.4
+  size_type size() const {return limit-data;}
+  const T& operrator[](size_type i) const {return data[i]}
+
+  //11.2.5
+  iterator begin(){return data;}
+  const_iterator begin() const {return data;}
+  iterator end(){return limit;}
+  const_iterator end() const {return limit;}
+
+  //11.3.1
+  Vec(const Vec& v){create()v.begin(),v.end();};//复制构造函数
+  Vec(){create();}
+  explicit Vec(size_type n ,const T& val=T()){create(n,val);}
+
+  //11.3.2
+  Vec& operator=(const Vec&);
+  
+  //其他保留接口
+private:
+  T* data;//Vec中的首元素
+  T* limit;//Vec中的末元素
+
+};
+  我们在对指针数据成员赋值时也要把运算符右操作数对象的每一个元素都复制过去。指针数据成员在进行复制操作时也遵从同样的规律。
+  这里是赋值操作：
+  template <class T>
+  Vec<T>& Vec<T>::operator=(const Vec& rhs)
+  {
+  //判断是否自我赋值
+  if(&rhs !=this)
+    {
+    uncreate();
+    create(rhs.begin(),rhs.end());
+    }
+    return *this;
+  }
+  这里有一个新概念：在除了类的头文件以外的地方定义一个模板成员函数的语法。对于一个模板，我们都在一开始就告诉编译器我们要启动一个模板，并且马上给出模板的参数。在这里用的是Vec<T>&的类型。
+  在头文件中定义时用的是Vec&类型，不需要显式地声明类型名称。因为在模板文件的范围内，c++允许我们忽略其具体类型名称。在头文件里，因为模板参数是隐式的，所以不需要重复写<T>。而在头文件外面，我们必须声明返回类型，所以要在必要的地方显式地写出模板参数。不过一旦前面指定我们的定义是一个Vec<T>类型的成员函数，后面就不需要重复使用这个定语了。
+
+  在本函数中还用到了另一个新的关键词：this。this只在成员函数内部才有效，代表指向函数操作的对象的指针。例如，在Vec::operator=函数中，this的类型为Vec*，这是因为operator=函数是类Vec的一个成员函数，所以this是指向一个Vec类型对象的指针。
+
+  而这里的if判断是非常重要的，当这两个指针指向同一个对象时，uncreate会将左操作数对象删掉，那么此时，右操作数也会被删掉，那么是谁赋值给谁？我们访问了一个没有分配的内存地址。
+  这里还有一个return语句，他对this间接引用，以此得到它指向的对象。然后返回一个该对象的引用。如果返回的是一个局域量对象，
+  ！！！！！这里看不懂，以后再说。这是书籍本身写的就不太容易懂。
+
+  11.3.3赋值不是初始化
