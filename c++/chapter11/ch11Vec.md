@@ -290,7 +290,61 @@ private:
 11.5灵活的内存管理
   在开始学习之前，我们不打算使用c++内建的new运算符与delte运算符来管理内存。因为如果使用了new与delete运算符，我们写出来的Vec类使用起来就要受到诸多限制，就不如标准向量类的使用范围那么广了。而且c++内建的new运算符要做许多工作：既要分配新的内存空间，又要对新内存进行初始化。在为一个类型为T的数组分配空间时，它需要去调用T的默认构造函数。而这有悖于我们想为用户提供尽可能大的弹性的初衷。
   使用new还可能会给程序带来许多的资源开销。如果我们使用new，它就会使用T:T()构造函数为一个类型为T的数组中的每一个元素都进行初始化。如果我们想用自己提供的数据来初始化Vec类型对象的元素的话，实现上要进行两次初始化——一次是new自动进行的，另一次是在把用户提供的数值赋给Vec类型对象的元素时进行的。更为糟糕的是，我们通过push_back分配我们实际需要的内存的两倍的空间来获得内存空间，我们没有理由要为这些额外的元素进行初始化。这些空间只会在把一个新的数据放进一个元素空间时才会被push_back函数使用。除了使用自带的new和delete来管理内存之外，还使用c++专门设计以支持灵活的内存管理的一些类来管理内存。语言核心本身没有提供直接的内存分配管理的语法。
-  只提供了统一的内存管理接口，在<memory>头文件中提供了一个名为allocator<T>的类，它可以分配一块预备用来储存T对象但是尚未被初始化的内存块，并返回一个指向这块内存的头元素的指针。这样的指针是非常危险的，因为指针的类型表明它们指向类型对象，但实际上这些内存块却并没有储存实际的对象。对象库提供了一种途径来为这种内存块进行初始化，也提供了删除对象的方法——
+  只提供了统一的内存管理接口，在<memory>头文件中提供了一个名为allocator<T>的类，它可以分配一块预备用来储存T对象但是尚未被初始化的内存块，并返回一个指向这块内存的头元素的指针。这样的指针是非常危险的，因为指针的类型表明它们指向类型对象，但实际上这些内存块却并没有储存实际的对象。对象库提供了一种途径来为这种内存块进行初始化，也提供了删除对象的方法——仅仅是删除对象，而没有释放空间。有程序员们来使用allocator类得到这些被指定用来存放类型对象但实际上没有被初始化的内存空间的地址。
+  在allocator类中，我们只对与我们的实现目的相关的部分感兴趣，这一部分包括四个成员函数和两个相关的非成员函数：
+  template<class T> class allocator{
+  public:
+    T* allocate(size_t);
+    void deallocate(T*,size_t);
+    void construct (T*,T);
+    void destroy(T*);
+    //...
+  };
+  void uninitialized_fill(T*,T*,const T&);
+  T*uninitialized_copy(T*,T&*,T*);
+
+  allocate成员函数用来分配一块被制定了类型但未被初始化的内存块，它足以储存相应类型对象的元素。被指定了类型的内存，意思是这块内存块将用来储存类型为T的值，我们可以通过使用一个T*类型的指针来得到它的地址。未被初始化的内存，意思是这块内存是原始的，在这块内存中没有储存任何实际的对象。deallocate成员函数则是用来释放未被初始化的内存，它带有两个参数：一个是allocate函数返回的指针；另一个是该指针指向的内存块的大小。construct成员函数是用来在allocate申请分配但尚未被初始化的内存区域上进行初始化，生成单个的对象，destroy成员函数则是用来删除这个对象。construct构造函数带有两个参数：一个是allocate函数返回的指针；另一个是用来复制到指针指向的内存块的对象值。destory函数调用析构函数，删除它的参数所指向对象的元素。
+  另外两个相关函数：uninitialized_copy和uninitialized_fill函数。这两个函数对allocate所分配的内存进行初始化。uninitialized_fill函数向内存块中填充一个指定的值。在函数调用结束后，前两个参数指针指向的内存区间中的元素都被初始化成第三个参数所值对象的内容。uninitialized_copy函数的工作机理类似标准库的copy函数，它用来把前两个参数指针所指向的内存区间中的值复制到第三个参数指针所指向的目标内存块中。这两个数据的流向是相反的。当然与uninitialized_fill函数一样，它假定目标内存块尚未被初始化，它将在目标内存块中构造新的对象。
+  我们将在Vec类中加入allocator<T>成员函数，用来正确的为T类的对象分配内存。
+
+
+  11.5.1最后的Vec类
+  template <class T> class Vec
+{
+public:
+  //11.2.3
+  typedef T* iterator;
+  typedef const T* const_iterator;
+  typedef size_t size_type;
+  typedef T value_type;
+  //......
+  //11.2.4
+  size_type size() const {return limit-data;}
+  const T& operrator[](size_type i) const {return data[i]}
+
+  //11.2.5
+  iterator begin(){return data;}
+  const_iterator begin() const {return data;}
+  iterator end(){return limit;}
+  const_iterator end() const {return limit;}
+
+  //11.3.1
+  Vec(const Vec& v){create(v.begin(),v.end());};//复制构造函数
+  Vec& operator=(const Vec&);
+
+  
+  Vec(){create();}
+  explicit Vec(size_type n ,const T& val=T()){create(n,val);}
+  //其他保留接口
+private:
+  iterator* data;//Vec中的首元素
+  iterator* avail;
+  iterator* limit;//Vec中的末元素
+
+};
+
+  
+  
   
   
   
