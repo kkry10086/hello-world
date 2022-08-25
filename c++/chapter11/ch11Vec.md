@@ -319,18 +319,28 @@ public:
   typedef T value_type;
   //......
   //11.2.4
-  size_type size() const {return limit-data;}
-  const T& operrator[](size_type i) const {return data[i]}
+  size_type size() const {return avail-data;}
+  const T& operator[](size_type i) const {return data[i]}
+  T& operator[](size_type i){return data[i];}
 
   //11.2.5
   iterator begin(){return data;}
   const_iterator begin() const {return data;}
-  iterator end(){return limit;}
-  const_iterator end() const {return limit;}
+  iterator end(){return avail;}
+  const_iterator end() const {return avail;}
 
   //11.3.1
   Vec(const Vec& v){create(v.begin(),v.end());};//复制构造函数
   Vec& operator=(const Vec&);
+  ~Vec(){uncreate();}
+
+  void push_back(const T& t){
+    if(avail==limit)
+      grow();
+
+    unchecked_append(t);
+  }
+  
 
   
   Vec(){create();}
@@ -338,14 +348,98 @@ public:
   //其他保留接口
 private:
   iterator* data;//Vec中的首元素
-  iterator* avail;
-  iterator* limit;//Vec中的末元素
+  iterator* avail;//Vec中的末元素后面一个元素
+  iterator* limit;//新分配内存中元元素后面一个元素
+
+  //内存分配工具
+  allocator<T> alloc; //控制内存分配的对象
+
+  //为底层的数组分配空间并对它进行初始化
+  void create();
+  void create(size_type,const &T);
+  void create(const_iterator,const_iterator);
+
+  //删除数组中的元素并释放其占用的内存
+  void uncreate();
+
+  //支持push_back的函数
+  void grow();
+  void unchecked_append(const T&);
 
 };
 
   
-  
-  
+  只要我们有一个有效的Vec类型对象，那它必须始终满足以下四个条件：
+  1.如果对象中有数据元素的花，data指向对象数组的首元素，否则为零；
+  2.data<=avail<=limit；
+  3.在[data,avail)区间内的元素被初始化；
+  4.在[avail,limit)区间的元素不会被初始化；
+
+
+  接下来的是create的函数：
+  template <class T>
+  void Vec<T>::create(){data=avail=limit=0;}
+
+  template <class T>
+  void Vec<T>
+  {
+    data=alloc.allocate(n);
+  }
+
+  template <class T>
+  void Vec<T>::create(const_iterator i,const_iterator j)
+  {
+    data=alloc.allocate(j-i);
+    limit=avail=uninitailized_copy(i,j,data);
+  }
+
+
+  template <class T>
+  {
+    if(data){
+      //以相反的顺序删除构造函数生成的元素
+      iterator it=avail;
+      while(it!=data)
+        alloc.destory(--it);
+
+      //返回占用的所有内存空间
+      alloc.deallocate(data,limit-data);
+    }
+    //重置指针以表明Vec类型对象为空
+    data=limit=avail=0;
+  }
+
+  这里的data必须判断是否为非零指针，因为deallocate函数需要一个非零指针作为参数。而与deallocate不同，delete作用在一个零指针上是不会产生错误的。
+  使用it迭代器来便利Vec类型对象中的每一个元素，调用destory函数来删除这些元素。与delete[]更加一致，是我们使用了倒序的方式删除。在删除对象中的元素之后，调用了deallocate函数来释放元素占用的空间（实际上是所有的空间）；有两个参数：一个指向带释放的内存空间的首元素的指针；另一个参数是一个整数值，表示要删除多少个T类型对象大小的内存要释放。
+
+  接下来的是grow函数：
+  template<class T>
+  void Vec<T>::grow(){
+    //在扩展对象大小的时候，为对象分配实际使用的两倍大小的内存空间
+    size_type new_size=max(2*(limit-data),ptrdiff_t(1));
+
+   //分配新的内存空间并将已存在的对象元素内容复制到新内存中
+   iterator new_data=alloc.allocate(new_size);
+   iterator new_avail=uninitialized_copy(data,avail,new_data);
+
+   //释放原来的内存空间
+   uncreate();
+
+   //重置指针，使其指向新分配的内存空间
+   data=new_data;
+   avail=new_avail;
+   limit=data+new_size;
+   
+  }
+
+  // 假设avail指向一片新分配但尚未被初始化的内存空间
+  template <class T>
+  void Vec<T>::unchecked_append(const T& val)
+  {
+    alloc.construct(avail++,val);
+  }
+
+  ptrdeiff(n)是用来初始化n个对象的，这是因为这里可能limit-data==0。
   
   
   
