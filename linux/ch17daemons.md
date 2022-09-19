@@ -358,7 +358,7 @@ at和atd，cron和crond这个d代表的就是daemon的意思。
    Befor：与After的意义相反，是在什么服务启动前最好启动这个服务的意思。不过这仅是规范服务启动的顺序，并非强制要求的意思。
    Requires：明确的定义此unit需要在哪个daemon启动后才能够启动。就是设定相依服务。如果此项设定的前导服务没有启动，那么此unit就不会被启动。
    Wants：与Requires刚好相反，规范的是这个unit之后最好还要启动什么服务比较好的意思。不过，并没有明确的规范就是了。主要的目的是希望建立让使用者比较好操作的环境。因此，这个Wants后面接的服务如果没有启动，不会影响到这个unit本身。
-   Conflicts：代表冲突的服务。亦即这个项目后面接的服务如果由启动，那么我们这个unit本身就不能启动。我们unit有启动，则此项目后的项目就不能启动。
+   Conflicts：代表冲突的服务。亦即这个项目后面接的服务如果有启动，那么我们这个unit本身就不能启动。我们unit有启动，则此项目后的项目就不能启动。
 
   
   b.service
@@ -381,9 +381,9 @@ at和atd，cron和crond这个d代表的就是daemon的意思。
   
 
   c.「install」
-  WantedBy：这个设定后面接的大部分时*.target unit。这个unitn本身是附挂再某一个target unit底下。一般来说，大多的服务性质的unit都是附挂在multi-user.target底下。
+  WantedBy：这个设定后面接的大部分是*.target unit。这个unit本身是附挂在某一个target unit底下。一般来说，大多的服务性质的unit都是附挂在multi-user.target底下。
   Also：当这个unit本身被enable时，Also后面接的unit也会enable的意思。也就是具有相依性的服务可以写在这里。
-  Alias：进行一个连结的别名的意思。当systemctl enable相关的服务时，则此服务会进行连接档的建立。以multi-user.target为例，这个家伙是用来作为预设操作环境default.target的规划，因此当你设定用！！！这里电子书明显有问题，等下看纸质书。
+  Alias：进行一个连结的别名的意思。当systemctl enable相关的服务时，则此服务会进行连接档的建立。以multi-user.target为例，这个家伙是用来作为默认操作环境default.target的使用，因此当你设置用成default.target时，这个/etc/systemd/system/default.target就会连接到/usr/lib/systemd/system/multi-user.target。
 
   17.3.3 两个vsftpd运作的实例
   我们可能需要在vsftod使用到两个port，分别是21以及555；在这两个port都启用的情况下，我们就需要两个配置文件以及两个启动脚本设定了。
@@ -395,6 +395,88 @@ at和atd，cron和crond这个d代表的就是daemon的意思。
 这里自己看书，自己配置文件的修改等。
 
 17.3.4 多重的重复设定方式：以getty为例
-  
+  我们有6个终端机可以使用，就是那个tty1-tty6。那个东西是由agetty这个指令达成的。而主要管理的是getty.target。不过实际产生tty1-tty2的则是由getty@.service所提供的。
+  先看看/usr/lib/systemd/system/getty@.service
+  其中最重要的是
+  ExecStart=-/sbin/agetty -o '-p -- \\u' --noclear %I $TERM
+  而我们由于有很多个tty，那么同样的我们需要相应的getty(num).service的配置文件，设定脚本。但是我们只有getty@.service，所以我们可以看看开启这个service的getty.target。
+  在鸟哥中：After=getty@tty1.service，getty@tty2.service，getty@tty3.service，getty@tty4.service，getty@tty5.service，getty@tty6.service
+  在我的系统中：After=getty@tty1.service getty-static.service
 
- 
+  这里是因为：当我们执行完getty.target之后，他会持续要求后面的getty@ttyn.service服务继续启动。而我们的systemd会这么作：
+  。先看/usr/lib/systemd/system，/etc/systemd/system有没有getty@tty1.service的设定，若有就执行，若没有则执行下一步。
+  。找getty@.service的设定，若有则将@后面的数据带入成%I的变量，进入getty@.service执行。getty@.service里面的ExecStart=-/sbin/agetty -o '-p -- \\u' --noclear %I $TERM。
+  也就是说其实没有getty@tty1.service而是透过getty@.service来执行。也就是说，getty@.service的目的是为了要简化多个执行的启动设定。命名方式是：
+  源文件：执行服务名称@.service；
+  执行文件：执行服务名称@范例名称.service。因此当有范例名称带入时，则会有一个新的服务名称产生出来。
+
+  a.改变tty的数量
+  我们tty的数量是在ssytemd的登入配置文件/etc/systemd/logind.conf里面规范的。
+  所以可以看看该配置文件里面，
+  修改[login]的内容：
+  #NAutoVTs=6
+  #ReserveVT=6
+  改为
+  NAutoVTs=n
+  ReserveVT=0
+
+
+  b.暂时增加vsftpd到2121port
+  其实在/usr/lib/systemd/system/底下还有个特别的vsftpd@.service。
+  cat /usr/lib/systemd/system/vsftpd@.service
+  在我的电脑中没有这个文件。
+  实际上，%i/%I就是代表@后面接的范例文件名的意思。那么我们能不能建立vsftpd3.conf文件，然后透过该文件来启动新的服务?
+  当然可以，使用方法：
+  systemctl start vsftpd@vsftpd3.service
+  systemctl status vsftpd@vsftpd3.service
+
+  17.3.5自己的服务自己作：
+  假设我要作一支可以备份自己系统的服务，这支脚本我放在~/backups底下。
+  vim ~/backups/backup.sh：
+  #!/bin/bash
+  source="/etc /usr /root /var/lib /var/spool/{cron,at} /home/zcj/书 /home/zcj/helloworld"
+
+  target="~/backups/backup-system-$(date +%Y-%m-%d).tar.xz"
+  [ ! -d ~/backups] && mkdir ~/backups
+  tar -cvzf ${target} ${source} &> ~/backups/backup.log
+
+  这是脚本。然后就是服务了，在所有的脚本的目录中，/etc/systemd/system是优先级最高的，而且我们也最好不要修改/usr/lib/systemd/system里面的内容。所以最好在/etc/systemd/system里面修改。
+  vim /etc/systemd/system/backup.service
+  [Unit]
+  Description=server to back my file 
+  Requires=atd.service
+
+  [Service]
+  Type=simple //可以改成oneshot，因为只执行一次。
+  ExecStart=/bin/bash -c "echo /home/zcj/backups/baskup.sh | at now"
+
+  [Install]
+  WantedBy=multi-user.target
+  Requires的at服务，是我们的ExecStart需要用到at指令。
+  之后就是重载所有的服务，然后开启我们的服务。顺带一提，作为脚本而不是程序，因此执行完毕后，就不会继续在内存中存在。
+  可以通过ps来看到我们的服务有成功运行。
+  ps aux |grep backup
+  root       19041  0.0  0.0  13060  3740 ?        S    10:55   0:00 /bin/bash /home/zcj/backups/backup.sh
+  root       19043  4.7  0.0  14216  4504 ?        S    10:55   0:05 tar -cvzf /home/zcj/backups/backup-system-2022-08-20.tar.xz /etc /usr /root /var/lib /var/spool/{cron,at} /home/zcj/书 /home/zcj/helloworld
+  root       19108  0.0  0.0  12184  2376 pts/1    S+   10:57   0:00 grep --color=auto backup
+
+  
+17.4 systemctl 针对timer的配置文件
+
+  有时候，某些服务你想要定期执行，或者是开机后执行，或者什么服务启动多久后执行等等。在过去，我们大概使用crond这个服务来定期处理，不过既然现在有一直常驻在内存中的systemd，加上systemd有个协力服务timers.target，可以协助定期处理各种任务。
+
+  a.systemd.timer的优势
+    在archlinux的官网上有提到：
+    。由于所有的systemd的服务产生的信息都会被及记录(log)，因此比crond在debug方面要更清除方便的多；
+    。各项timer的工作可以跟systemd的服务相结合；
+    。各项timer的工作可以跟contrl group(cgroup，用来取代/etc/secure/limit.conf的功能)结合，来限制该工作的资源利用。
+    
+  b.任务需求
+  基本上，想要使用systemd的timer功能，必须要有几个要件：
+    。系统的timer.target一定要启动；
+    。要有个sname.service的服务存在，sname是自己指定的名称；
+    。要有个sname.timer的时间启动服务存在。
+  满足上面的需求就可以了。我们的backup.service可以拿来实验，我们也不希望每次都要打开使用，但是可以让它定期执行。
+
+  c.sanme.timer的设定值
+  
