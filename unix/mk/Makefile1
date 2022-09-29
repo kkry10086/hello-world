@@ -1,0 +1,2 @@
+test:add.c sub.c test.c
+	g++ add.c sub.c test.c -o test

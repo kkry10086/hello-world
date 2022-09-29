@@ -1,0 +1,15 @@
+OBJS=add.o sub.o test.o
+
+test:$(OBJS)
+	g++ $(OBJS) -o test
+
+add.o:add.c
+	g++ -c add.c
+
+sub.o:sub.c
+	g++ -c sub.c
+test.o:test.c
+	g++ -c test.c
+
+clean:
+	rm $(OBJS)

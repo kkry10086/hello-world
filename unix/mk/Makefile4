@@ -1,0 +1,20 @@
+OBJS=add.o sub.o test.o
+
+#$@表示目标
+#$^表示所有的依赖
+#$<表示第一个依赖
+
+test:$(OBJS)
+	g++ $^ -o $@
+
+add.o:add.c
+	g++ -c $< -o $@
+
+sub.o:sub.c
+	g++ -c $< -o $@
+
+test.o:test.c
+	g++ -c $< -o $@
+
+clean:
+	rm $(OBJS)
