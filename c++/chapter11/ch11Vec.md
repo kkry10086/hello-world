@@ -164,7 +164,7 @@ public:
   typedef T value_type;
   //......
   //11.2.4
-  size_type size() const {return limit-data;}
+  size_type size() const {return avail-data;}
   const T& operrator[](size_type i) const {return data[i]}
 
   //11.2.5
@@ -201,7 +201,7 @@ public:
   //......
   //11.2.4
   size_type size() const {return limit-data;}
-  const T& operrator[](size_type i) const {return data[i]}
+  const T& operator[](size_type i) const {return data[i]}
 
   //11.2.5
   iterator begin(){return data;}
