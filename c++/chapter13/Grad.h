@@ -1,20 +1,25 @@
+#include"./Core.h"
+#include<iostream>
+#include<vector>
+#include<algorithm>
+
 class Grad :public Core{
     public:
-    Grade();
-    Grade(std::istream& in){read(in);}
-    double grade() const;
+    Grad():thesis(0);
+    Grad(std::istream& in){read(in);}
     std::istream& read(std::istream&);
-
+    double grade() const;
+    
     private:
     double thesis;
 };
-istream& Grad::read(istream& in){
-    read_common(in);
-    in>>thesis;
-    read_hw(in,homework);
+std::istream& Grad::read(std::istream& in){
+    Core::read_common(in);
+    in >> thesis;
+    ::read_hw(in,homework);
     return in;
 }
 
 double Grad::grade()const{
-    return min(Core::grade(),thesis);
+    return std::min(Core::grade(),thesis);
 }
