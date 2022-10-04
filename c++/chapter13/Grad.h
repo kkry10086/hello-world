@@ -10,6 +10,11 @@ class Grad :public Core{
     std::istream& read(std::istream&);
     double grade() const;
     
+    protected:
+    Grad* clone()const {
+        return new Grad(*this);
+    }
+
     private:
     double thesis;
 };
