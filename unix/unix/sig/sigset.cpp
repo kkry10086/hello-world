@@ -5,11 +5,12 @@
 using std::cout;
 using std::endl;
 
-//显示信号集
+//显示信号集（阻塞信号集）
 void show_set(sigset_t& set){
   int i=0;
     for(i=1;i<32;i++){
 
+      //某个信号是否有在该信号集中
     if(sigismember(&set,i)){
       cout<<1;
     }

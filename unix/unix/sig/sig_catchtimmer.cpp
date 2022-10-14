@@ -3,8 +3,17 @@
 #include<string.h>
 #include<sys/time.h>
 #include<unistd.h>
+#include<signal.h>
+
+
 
 using std::cout;using std::endl;
+
+//信号响应函数
+void fun(int signum){
+
+  cout<<"捕捉到信号："<<signum<<endl;
+}
 
 int main(int argc,char ** argv){
 
@@ -18,6 +27,9 @@ int main(int argc,char ** argv){
 	//触发周期
 	tmo.it_interval.tv_sec=2;
 	tmo.it_interval.tv_usec=0;
+	
+	//捕捉信号
+	signal(SIGALRM,fun);
 
        //调用settimer函数
 	
