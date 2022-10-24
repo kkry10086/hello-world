@@ -117,4 +117,34 @@ POSIX定义的读写锁的数据类型是： pthread_rwlock_t
 
 ## 三、条件变量
 
+#### 3.1概述
+
+与互斥锁不同，条件变量是用来等待而不是用来上锁的。条件变量本身不是锁。
+条件变量是用来自动阻塞一个线程，直到某特殊情况发生为止。通常条件变量和互斥锁同时使用。
+**条件变量的两个动作：**
+1. 条件不满，阻塞线程
+2. 条件满足，通知阻塞的线程开始工作
+
+条件变量的类型：pthread_cond_t
+
+#### 3.2 条件变量的函数：
+pthread_cond_init(pthread_cond_t *,...)
+pthread_cond_destroy(pthread_cond_t *)
+pthread_cond_wait(pthread_cond_t *,pthread_mutex_t *)
+pthread_cond_timewait(pthread_cond_t *,pthread_mutex_t *,struct abstime) //增加了时限
+pthread_cond_signal(pthread_cont_t *)//唤醒至少一个阻塞在条件变量上的线程
+pthread_cond_broadcast(pthread_cont_t *)//唤醒全部阻塞在条件变量上的线程
+
+
+
+## 四、信号量
+
+#### 4.1概述
+信号量广泛用于进程或线程间的同步或异步，信号量本质上是一个非负的整数计数器，它被用来控制对公共资源的访问。
+
+编程时可根据信号量值的结果判断是否对公共资源具有访问的权限。当信号量大于0时，则可以访问，否则将阻塞。
+
+PV原语是对信号量的操作，一次P操作使信号量减一，一次V操作使信号量加一。
+信号量主要用于进程或线程间的同步和互斥这两者典型情况。
+**信号量数据类型为：sem_t。**
 
