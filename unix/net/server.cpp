@@ -34,7 +34,7 @@ int main(int argc, char ** argv)
    perror("bind");
    return 1;
  }
- char buf[SIZE]="";
+ char buf[SIZE]=""
  socklen_t len =sizeof(cli_addr);
 
  while(1){
