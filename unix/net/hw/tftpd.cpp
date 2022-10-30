@@ -8,6 +8,7 @@
 
 #include "talk.h"
 
+char *ip="172.28.136.107";
 #define SIZE 128
 
 //客户端的sockaddr_in
@@ -38,7 +39,7 @@ void * pthread_talk(void *arg){
 
     struct sockaddr_in cli;
     //拷贝到cli
-    memcpy(&cli,&cli_addr,sizeof(struct sockaddr_in));
+    memcpy(&cli,&cli_addr,sizeof(cli_addr));
     //test whether get the cli_addr or no
     //10/27发现cli是空的,在新建pthread时候cli_addr就会便成为空的。
    
@@ -83,7 +84,7 @@ int main(int argc, char ** argv)
     server_addr.sin_family=AF_INET;
     server_addr.sin_port=htons(9000);
     //给套接字增加ipaddress
-    inet_pton(AF_INET,"192.168.3.38",&server_addr.sin_addr.s_addr);
+    inet_pton(AF_INET,ip,&server_addr.sin_addr.s_addr);
 
     if(-1 == bind(sock,(struct sockaddr *)&server_addr,sizeof(server_addr)))
     {
@@ -118,6 +119,7 @@ int main(int argc, char ** argv)
 
        //将read的资源加1
        sem_post(&read_addr);
+       sleep(10);
    }
 
    //销毁信号量
