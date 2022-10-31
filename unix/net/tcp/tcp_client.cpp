@@ -12,7 +12,7 @@ using std::string;
 int main(int argc, char ** argv)
 {
 	//目的IP
-	string ip = "172.18.246.25";
+	string ip = "192.168.3.38";
 
 
 	//1.创建流式套接字
@@ -25,7 +25,7 @@ int main(int argc, char ** argv)
     //2.创建连接的服务器的结构体
 	struct sockaddr_in ser_addr;
 	ser_addr.sin_family = AF_INET;
-	ser_addr.sin_port = 9000;
+	ser_addr.sin_port = htons(9000);
 	//这里要的数据是指针，所以不能使用string::c_str()
 	ser_addr.sin_addr.s_addr = inet_addr(ip.data());
 
