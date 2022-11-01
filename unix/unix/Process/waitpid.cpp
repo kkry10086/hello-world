@@ -30,7 +30,7 @@ int main(){
 	int ret=waitpid(pid,&status,WNOHANG);
 	//不阻塞情况下
 	if(-1==ret){
-	perror("wait");
+	perror("waitpid");
 	return 1;
 	}
 	printf("父进程回收子进程的资源\n");

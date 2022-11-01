@@ -23,6 +23,7 @@ int main(int argc, char** argv){
 
 
 #if 0
+  //act.sa_mask捕捉到信号时的临时屏蔽集
     struct sigaction act;
   //使用旧的信号处理函数指针
   act.sa_handler=fun;

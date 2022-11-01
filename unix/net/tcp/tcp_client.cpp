@@ -1,5 +1,6 @@
 #include<iostream>
 #include<string>
+#include<string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -12,7 +13,7 @@ using std::string;
 int main(int argc, char ** argv)
 {
 	//目的IP
-	string ip = "192.168.3.38";
+	string ip = "192.168.50.2";
 
 
 	//1.创建流式套接字
@@ -36,8 +37,8 @@ int main(int argc, char ** argv)
 	//3.链接服务器
     int ret = connect(sock,(struct sockaddr *)&ser_addr,ser_addr_len);
 	if(-1 == ret){
-	perror("connect");
-	return 1;
+		perror("connect");
+		return 1;
 	}
 
 
@@ -52,6 +53,7 @@ int main(int argc, char ** argv)
 		cout<<"what send to server ?"<<endl;
 		cin>>smsg;
 		write(sock,smsg.data(),smsg.length());
+		memset(rmsg,0,SIZE);
 		int len = read(sock,rmsg,SIZE);
 		if(0 == len){
 			cout<<"connection close"<<endl;
