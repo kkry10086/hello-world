@@ -13,7 +13,7 @@ using std::string;
 int main(int argc, char ** argv)
 {
 	//目的IP
-	string ip = "192.168.50.2";
+	string ip = "192.168.3.38";
 
 
 	//1.创建流式套接字

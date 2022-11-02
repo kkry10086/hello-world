@@ -1,5 +1,6 @@
 #include<iostream>
 #include<string>
+#include<sys/types.h>
 #include<sys/socket.h>
 #include<arpa/inet.h>
 #include<unistd.h>
@@ -62,7 +63,7 @@ void *talk_client(void * arg){
 int main(int argc, char ** argv)
 {
 	int s_sock = -1;
-	string ip = "192.168.50.2";
+	string ip = "192.168.3.38";
 	//已连接，未连接两条队列的最大之和
 	int backlog = 128;
 
@@ -79,6 +80,9 @@ int main(int argc, char ** argv)
 	s_addr.sin_port = htons(9000);
 	inet_pton(AF_INET,ip.data(),&s_addr.sin_addr.s_addr);
 
+    //设置端口复用
+    int opt = -1;
+    setsockopt(s_sock,SOL_SOCKET,SO_REUSEADDR,&opt,sizeof(opt));
 
 	//绑定套接字与结构体中的信息
 	bind(s_sock,(struct sockaddr *)&s_addr,sizeof(s_addr));

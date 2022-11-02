@@ -44,7 +44,9 @@ int accept(int sockfd,struct sockaddr *addr,socklen_t *addrlen);
 
 <p>
 <strong><font color = "red">
-实际上在发生上诉操作时，系统内核不会那么快的回收socket资源。因为内核需要完成TCP的四次挥手来结束这次的链接，因此内核无法那么快的将进程完全杀掉，因为需要进程的信息来完成四次挥手。 
+实际上在发生上诉操作时，系统内核不会那么快的回收socket资源。
+因为内核需要完成TCP的四次挥手来结束这次的链接，但是四次挥手中，谁最先发送FIN，
+谁就要进入TIME_WAIT的状态，此时就要等待2MSL的时间。在这个时间内无法在接受新的连接。
 此时，server再次运行就再次绑定了。这次的绑定是允许的。
 </font>
 </strong>
